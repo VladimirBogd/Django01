@@ -5,18 +5,18 @@ from wizards.models import Wizard, Guild, Order, Customer, Wizard_Order
 class GuildSerializer(serializers.ModelSerializer):
   class Meta:
     model = Guild
-    fields = ['id', 'name']
+    fields = ['id', 'name', 'picture']
 #----------------------------------------------------------------------------------------------------
 class CustomerSerializer(serializers.ModelSerializer):
   class Meta:
     model = Customer
-    fields = ['id', 'name']
+    fields = ['id', 'name', 'picture']
 #----------------------------------------------------------------------------------------------------
 class WizardSerializer(serializers.ModelSerializer):
   # guild = GuildSerializer(read_only=True)
   class Meta:
     model = Wizard
-    fields = ['id', 'name', 'guild']
+    fields = ['id', 'name', 'guild', 'picture']
 #----------------------------------------------------------------------------------------------------
 class OrderSerializer(serializers.ModelSerializer):
   # guild = GuildSerializer(read_only=True)

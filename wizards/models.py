@@ -2,7 +2,8 @@ from django.db import models
 
 class Guild(models.Model):
   name = models.TextField("Название")
-
+  picture = models.ImageField("Изображение", null=True, upload_to="guilds")
+  
   class Meta:
     verbose_name = "Гильдия"
     verbose_name_plural = "Гильдии"
@@ -13,6 +14,7 @@ class Guild(models.Model):
 class Wizard(models.Model):
   name = models.TextField("Имя")
   guild = models.ForeignKey("Guild", on_delete=models.CASCADE, null=True)
+  picture = models.ImageField("Изображение", null=True, upload_to="wizards")
 
   class Meta:
     verbose_name = "Волшебник"
@@ -23,6 +25,7 @@ class Wizard(models.Model):
 #---------------------------------------------------------------------------------------------------- 
 class Customer(models.Model):
   name = models.TextField("Имя")
+  picture = models.ImageField("Изображение", null=True, upload_to="customers")
 
   class Meta:
     verbose_name = "Заказчик"

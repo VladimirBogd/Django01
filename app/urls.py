@@ -14,13 +14,16 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
+from django.conf import settings
 from django.contrib import admin
 from django.urls import include, path
+from django.conf.urls.static import static
 
 from wizards import views
 from rest_framework.routers import DefaultRouter
 
 from wizards.api import WizardsViewset, GuildsViewset, CustomersViewset, OrdersViewset, Wizard_OrderViewset
+# ,UserViewset
 
 router = DefaultRouter()
 router.register("wizards", WizardsViewset, basename="wizards")
@@ -28,9 +31,10 @@ router.register("guilds", GuildsViewset, basename="guilds")
 router.register("customers", CustomersViewset, basename="customers")
 router.register("orders", OrdersViewset, basename="orders")
 router.register("wizard_order", Wizard_OrderViewset, basename="wizard_order")
+# router.register("user", UserViewset, basename="user")
 
 urlpatterns = [
     path('', views.ShowWizardsView.as_view()),
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
-]
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
