@@ -1,4 +1,9 @@
 <script setup>
+import { storeToRefs } from "pinia";
+import useUserStore from "./stores/userStore";
+
+const userStore = useUserStore();
+const { isAuthenticated, username, userId } = storeToRefs(userStore);
 </script>
 
 <template>
@@ -26,6 +31,9 @@
               <router-link class="nav-link" to="/guilds"> Гильдии </router-link>
             </li>
             <li class="nav-item">
+              <router-link class="nav-link" to="/teams"> Команды </router-link>
+            </li>
+            <li class="nav-item">
               <router-link class="nav-link" to="/customers">
                 Заказчики
               </router-link>
@@ -44,14 +52,14 @@
                   data-bs-toggle="dropdown"
                   aria-expanded="false"
                 >
-                  Пользователь
+                  {{ username }}
                 </a>
                 <ul class="dropdown-menu">
                   <li><a class="dropdown-item" href="/admin">Админка</a></li>
                 </ul>
               </li>
             </ul>
-            <router-link class="nav-link" to="/">
+            <router-link class="nav-link" to="/users">
               <button class="btn btn-outline-info" type="button">
                 <i class="bi bi-person-fill"></i>
               </button>

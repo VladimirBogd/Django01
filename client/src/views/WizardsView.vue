@@ -11,6 +11,7 @@ onBeforeMount(() => {
 const loading = ref(false);
 
 const guilds = ref([]);
+const teams = ref([]);
 const wizards = ref([]);
 const wizardToAdd = ref({});
 const wizardToEdit = ref({});
@@ -27,8 +28,16 @@ const guildsById = computed(() => {
 
 async function fetchGuilds() {
   const r = await axios.get("/api/guilds/");
-  console.log(r.data);
   guilds.value = r.data;
+}
+
+const teamsById = computed(() => {
+  return _.keyBy(teams.value, (x) => x.id);
+});
+
+async function fetchTeams() {
+  const r = await axios.get("/api/teams/");
+  teams.value = r.data;
 }
 
 async function fetchWizards() {
@@ -46,6 +55,7 @@ async function onWizardAdd() {
 
   formData.set("name", wizardToAdd.value.name);
   formData.set("guild", wizardToAdd.value.guild);
+  formData.set("team", wizardToAdd.value.team);
 
   await axios.post("/api/wizards/", formData, {
     headers: {
@@ -77,6 +87,7 @@ async function onWizardUpdate() {
 
   formData.set("name", wizardToEdit.value.name);
   formData.set("guild", wizardToEdit.value.guild);
+  formData.set("team", wizardToEdit.value.team);
 
   await axios.put(`/api/wizards/${wizardToEdit.value.id}/`, formData, {
     headers: {
@@ -94,7 +105,6 @@ async function wizardEditPictureChange() {
 }
 
 async function OnWizardRemove(wizard) {
-  console.log(wizard);
   await axios.delete(`/api/wizards/${wizard.id}/`);
   await fetchWizards();
 }
@@ -102,6 +112,7 @@ async function OnWizardRemove(wizard) {
 onBeforeMount(async () => {
   await fetchWizards();
   await fetchGuilds();
+  await fetchTeams();
 });
 
 const showZoomImageContainer = ref(false);
@@ -153,9 +164,21 @@ function hideZoomImage() {
           <div class="col-auto">
             <div class="form-floating mb-3">
               <select class="form-select" v-model="wizardToAdd.guild" required>
-                <option :value="g.id" v-for="g in guilds">{{ g.name }}</option>
+                <option :value="g.id" :key="g.id" v-for="g in guilds">
+                  {{ g.name }}
+                </option>
               </select>
               <label for="floatingInput">Гильдия</label>
+            </div>
+          </div>
+          <div class="col-auto">
+            <div class="form-floating mb-3">
+              <select class="form-select" v-model="wizardToAdd.team" required>
+                <option :value="t.id" :key="t.id" v-for="t in teams">
+                  {{ t.name }}
+                </option>
+              </select>
+              <label for="floatingInput">Команда</label>
             </div>
           </div>
           <div class="col-auto">
@@ -167,14 +190,15 @@ function hideZoomImage() {
       <div v-if="loading">Гружу...</div>
 
       <div>
-        <div v-for="item in wizards" class="wizard-item">
+        <div v-for="item in wizards" :key="item.id" class="wizard-item">
           <div>{{ item.name }}</div>
           <div>{{ guildsById[item.guild]?.name }}</div>
+          <div>{{ teamsById[item.team]?.name }}</div>
           <div v-show="item.picture">
             <img
               :src="item.picture"
               style="max-height: 60px"
-              @click="showZoomImage(wizardAddImageUrl)"
+              @click="showZoomImage(item.picture)"
             />
           </div>
           <button
@@ -226,11 +250,25 @@ function hideZoomImage() {
                 <div class="col-auto">
                   <div class="form-floating mb-3">
                     <select class="form-select" v-model="wizardToEdit.guild">
-                      <option :value="g.id" v-for="g in guilds">
+                      <option
+                        :value="g.id"
+                        v-for="g in guilds"
+                        v-bind:key="g.id"
+                      >
                         {{ g.name }}
                       </option>
                     </select>
                     <label for="floatingInput">Гильдия</label>
+                  </div>
+                </div>
+                <div class="col-auto">
+                  <div class="form-floating mb-3">
+                    <select class="form-select" v-model="wizardToEdit.team">
+                      <option :value="t.id" :key="t.id" v-for="t in teams">
+                        {{ t.name }}
+                      </option>
+                    </select>
+                    <label for="floatingInput">Команда</label>
                   </div>
                 </div>
                 <div class="col-auto">
@@ -299,7 +337,7 @@ function hideZoomImage() {
   border: 1px solid silver;
   border-radius: 8px;
   display: grid;
-  grid-template-columns: 1fr auto auto auto auto;
+  grid-template-columns: 1fr auto auto auto auto auto;
   gap: 16px;
   align-items: center;
   align-content: center;

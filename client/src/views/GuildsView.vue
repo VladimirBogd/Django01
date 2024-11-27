@@ -77,6 +77,7 @@ async function guildEditPictureChange() {
   guildEditImageUrl.value = URL.createObjectURL(
     guildEditPictureRef.value.files[0]
   );
+  hasGuildEditPicture.value = true;
 }
 
 async function OnGuildRemove(guild) {

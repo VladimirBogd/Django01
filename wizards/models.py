@@ -10,10 +10,19 @@ class Guild(models.Model):
 
   def __str__(self) -> str:
     return self.name
+#---------------------------------------------------------------------------------------------------- 
+class Team(models.Model):
+  name = models.TextField("Название")
+  guild = models.ForeignKey("Guild", on_delete=models.CASCADE, null=True)
+
+  class Meta:
+    verbose_name = "Команда"
+    verbose_name_plural = "Команды"
 #----------------------------------------------------------------------------------------------------
 class Wizard(models.Model):
   name = models.TextField("Имя")
   guild = models.ForeignKey("Guild", on_delete=models.CASCADE, null=True)
+  team = models.ForeignKey("Team", on_delete=models.CASCADE, null=True, blank=True)
   picture = models.ImageField("Изображение", null=True, upload_to="wizards")
 
   class Meta:
@@ -35,11 +44,24 @@ class Customer(models.Model):
     return self.name
 #----------------------------------------------------------------------------------------------------  
 class Order(models.Model):
+  class OrderStatus(models.TextChoices):
+    NEW = 'new', 'Новый'
+    IN_PROGRESS = 'in_progress', 'В процессе'
+    COMPLETED = 'completed', 'Выполнен'
+    FAILED = 'failed', 'Невыполнен'
+
   name = models.TextField("Название")
   cost = models.TextField("Стоимость")
+  status = models.CharField(
+      "Статус",
+      max_length=20,
+      choices=OrderStatus.choices,
+      default=OrderStatus.NEW
+  )
 
   customer = models.ForeignKey("Customer", on_delete=models.CASCADE, null=True)
   guild = models.ForeignKey("Guild", on_delete=models.CASCADE, null=True)
+  team = models.ForeignKey("Team", on_delete=models.CASCADE, null=True, blank=True)
 
   class Meta:
     verbose_name = "Заказ"

@@ -2,7 +2,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 from model_bakery import baker
 
-from wizards.models import Wizard, Guild, Order, Customer, Wizard_Order
+from wizards.models import Wizard, Guild, Order, Customer, Wizard_Order, Team
 
 # Create your tests here.
 class WizardsViewsetTestCase(TestCase):
@@ -15,11 +15,17 @@ class WizardsViewsetTestCase(TestCase):
 
     def test_get_wizard(self):
         gld = Guild.objects.create(
-            name="Blue Pegasus"
+            name = "Blue Pegasus"
+        )
+        
+        tm = Team.objects.create(
+            name = "Team 1",
+            guild = gld,
         )
         
         wizard = Wizard.objects.create(
             name="Hibiki Lates",
+            team = tm,
             guild = gld,
         )
 
@@ -29,14 +35,17 @@ class WizardsViewsetTestCase(TestCase):
 
         assert wizard.name == data[0]['name']
         assert wizard.id == data[0]['id']
+        assert wizard.team.id == data[0]['team']
         assert wizard.guild.id == data[0]['guild']
         assert len(data) == 1
 
     def test_create_wizard(self):
         gld = baker.make("wizards.Guild")
+        tm = baker.make("wizards.Team")
 
         r = self.client.post("/api/wizards/", {
             "name": "Hibiki Lates",
+            "team": tm.id,
             "guild": gld.id
         })
 
@@ -46,6 +55,7 @@ class WizardsViewsetTestCase(TestCase):
 
         new_wizard = Wizard.objects.filter(id=new_wizard_id).first()
         assert new_wizard.name == 'Hibiki Lates'
+        assert new_wizard.team == tm
         assert new_wizard.guild == gld
 
     def test_delete_wizard(self):
@@ -64,15 +74,18 @@ class WizardsViewsetTestCase(TestCase):
         assert wizard_id_to_delete not in [i['id'] for i in data]
 
     def test_update_wizard(self):
-        wizards = baker.make("Wizard", 10)
-        wizard: Wizard = wizards[2]
+        guild = baker.make('Guild', name="Blue Pegasus")
+        team = baker.make('Team', name="Team 1")
+        wizard = baker.make('Wizard', name="Laxus Dreyar", guild=guild, team=team)
 
         r = self.client.get(f'/api/wizards/{wizard.id}/')
         data = r.json()
         assert data['name'] == wizard.name
 
         r = self.client.put(f'/api/wizards/{wizard.id}/', {
-            "name": "Laxus Dreyar"
+            "name": "Laxus Dreyar",
+            "guild": wizard.guild.id,
+            "team": wizard.team.id
         })
         assert r.status_code == 200
 
@@ -82,6 +95,84 @@ class WizardsViewsetTestCase(TestCase):
 
         wizard.refresh_from_db()
         assert data['name'] == wizard.name
+
+class TeamsViewsetTestCase(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+
+    def test_get_list(self):
+        r = self.client.get('/api/teams/')
+        print(r)
+
+    def test_get_team(self):
+        gld = Guild.objects.create(
+            name = "Blue Pegasus"
+        )
+        
+        team = Team.objects.create(
+            name="Team 1",
+            guild = gld,
+        )
+
+        r = self.client.get('/api/teams/')
+        data = r.json()
+        print(data)
+
+        assert team.name == data[0]['name']
+        assert team.id == data[0]['id']
+        assert team.guild.id == data[0]['guild']
+        assert len(data) == 1
+
+    def test_create_team(self):
+        gld = baker.make("Guild")
+        
+        r = self.client.post("/api/teams/", {
+            "name": "Team 1",
+            "guild": gld.id
+        })
+
+        new_team_id = r.json()['id']
+        teams = Team.objects.all()
+        assert len(teams) == 1
+
+        new_team = Team.objects.filter(id=new_team_id).first()
+        assert new_team.name == 'Team 1'
+        assert new_team.guild == gld
+
+    def test_delete_team(self):
+        teams = baker.make("Team", 10)
+        r = self.client.get('/api/teams/')
+        data = r.json()
+        assert len(data) == 10
+
+        team_id_to_delete = teams[3].id
+        self.client.delete(f'/api/teams/{team_id_to_delete}/')
+
+        r = self.client.get('/api/teams/')
+        data = r.json()
+        assert len(data) == 9
+
+        assert team_id_to_delete not in [i['id'] for i in data]
+
+    def test_update_team(self):
+        guild = baker.make('Guild', name="Blue Pegasus")
+        team = baker.make('Team', name="Team 1", guild=guild)
+
+        r = self.client.get(f'/api/teams/{team.id}/')
+        data = r.json()
+        assert data['name'] == team.name
+
+        r = self.client.put(f'/api/teams/{team.id}/', {
+            "name": "Team 1"
+        })
+        assert r.status_code == 200
+
+        r = self.client.get(f'/api/teams/{team.id}/')
+        data = r.json()
+        assert data['name'] == 'Team 1'
+
+        team.refresh_from_db()
+        assert data['name'] == team.name
 
 class GuildsViewsetTestCase(TestCase):
     def setUp(self):
@@ -232,11 +323,17 @@ class OrdersViewsetTestCase(TestCase):
             name="Kaby Melon"
         )
         
+        tm = Team.objects.create(
+            name="Team 1"
+        )
+        
         order = Order.objects.create(
             name="Поиск книги отца",
             cost="5000000",
+            status=Order.OrderStatus.NEW,
             guild = gld,
-            customer = cstmr
+            customer = cstmr,
+            team=tm,
         )
 
         r = self.client.get('/api/orders/')
@@ -248,17 +345,21 @@ class OrdersViewsetTestCase(TestCase):
         assert order.id == data[0]['id']
         assert order.guild.id == data[0]['guild']
         assert order.customer.id == data[0]['customer']
+        assert order.team.id == data[0]['team']
+        assert order.status == Order.OrderStatus.NEW.value
         assert len(data) == 1
 
     def test_create_order(self):
         gld = baker.make("Guild")
         cstmr = baker.make("Customer")
+        tm = baker.make("Team")
 
         r = self.client.post("/api/orders/", {
             "name": "Поиск книги отца",
             "cost": "5000000",
             "guild": gld.id,
-            "customer": cstmr.id
+            "customer": cstmr.id,
+            "team": tm.id
         })
 
         new_order_id = r.json()['id']
@@ -270,6 +371,8 @@ class OrdersViewsetTestCase(TestCase):
         assert new_order.cost == '5000000'
         assert new_order.guild == gld
         assert new_order.customer == cstmr
+        assert new_order.team == tm
+        assert new_order.status == Order.OrderStatus.NEW.value
 
     def test_delete_order(self):
         orders = baker.make("Order", 10)
@@ -287,22 +390,29 @@ class OrdersViewsetTestCase(TestCase):
         assert order_id_to_delete not in [i['id'] for i in data]
 
     def test_update_order(self):
-        orders = baker.make("Order", 10)
-        order: Order = orders[2]
+        customer = baker.make('Customer', name="Kaby Melon")
+        guild = baker.make('Guild', name="Blue Pegasus")
+        team = baker.make('Team', name="Team 1")
+        order = baker.make('Order', name="Поиск книги отца", cost="5000000", status=Order.OrderStatus.NEW, customer=customer, guild=guild, team=team)
 
         r = self.client.get(f'/api/orders/{order.id}/')
         data = r.json()
         assert data['name'] == order.name
 
+        new_name = "Обновленное название"
         r = self.client.put(f'/api/orders/{order.id}/', {
-            "name": "Поиск книги отца",
-            "cost": "5000000"
+            "name": new_name,
+            "cost": "5000000",
+            "status": Order.OrderStatus.NEW.value,
+            "customer": order.customer.id,
+            "guild": order.guild.id,
+            "team": order.team.id
         })
         assert r.status_code == 200
 
         r = self.client.get(f'/api/orders/{order.id}/')
         data = r.json()
-        assert data['name'] == 'Поиск книги отца'
+        assert data['name'] == new_name
 
         order.refresh_from_db()
         assert data['name'] == order.name
