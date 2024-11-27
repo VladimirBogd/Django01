@@ -45,10 +45,10 @@ class Customer(models.Model):
 #----------------------------------------------------------------------------------------------------  
 class Order(models.Model):
   class OrderStatus(models.TextChoices):
-    NEW = 'new', 'Новый'
-    IN_PROGRESS = 'in_progress', 'В процессе'
-    COMPLETED = 'completed', 'Выполнен'
-    FAILED = 'failed', 'Невыполнен'
+    NEW = 'Новый'
+    IN_PROGRESS = 'В процессе'
+    COMPLETED = 'Выполнен'
+    FAILED = 'Невыполнен'
 
   name = models.TextField("Название")
   cost = models.TextField("Стоимость")
@@ -62,6 +62,8 @@ class Order(models.Model):
   customer = models.ForeignKey("Customer", on_delete=models.CASCADE, null=True)
   guild = models.ForeignKey("Guild", on_delete=models.CASCADE, null=True)
   team = models.ForeignKey("Team", on_delete=models.CASCADE, null=True, blank=True)
+  
+  user = models.ForeignKey("auth.User", verbose_name="Пользователь", on_delete=models.CASCADE, null=True)
 
   class Meta:
     verbose_name = "Заказ"

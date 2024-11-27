@@ -68,6 +68,12 @@ class OrdersViewset(
 ):
     queryset = Order.objects.all()
     serializer_class = OrderSerializer
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+        # фильтруем по текущему юзеру
+        qs = qs.filter(user=self.request.user)
+        return qs
 # ----------------------------------------------------------------------------------------------------
 
 
@@ -113,7 +119,7 @@ class UserViewset(GenericViewSet):
     def login(self, request, *args, **kwargs):
         username = request.data.get("user")
         password = request.data.get("pass")
-        
+
         user = authenticate(request, username=username, password=password)
         if user:
             login(request, user)
