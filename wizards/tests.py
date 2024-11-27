@@ -2,7 +2,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 from model_bakery import baker
 
-from wizards.models import Wizard, Guild, Order, Customer, Wizard_Order, Team
+from wizards.models import Wizard, Guild, Order, Customer, Team
 
 # Create your tests here.
 class WizardsViewsetTestCase(TestCase):
@@ -416,77 +416,3 @@ class OrdersViewsetTestCase(TestCase):
 
         order.refresh_from_db()
         assert data['name'] == order.name
-
-class Wizard_Wizard_OrderViewsetTestCase(TestCase):
-    def setUp(self):
-        self.client = APIClient()
-
-    def test_get_list(self):
-        r = self.client.get('/api/wizard_order/')
-        print(r)
-
-    def test_get_wizard_order(self):
-        gld = Guild.objects.create(
-            name="Blue Pegasus"
-        )
-        
-        wzrd = Wizard.objects.create(
-            name="Lucy Heartfilia",
-            guild=gld
-        )
-
-        cstmr = Customer.objects.create(
-            name="Kaby Melon"
-        )
-
-        ordr = Order.objects.create(
-            name="Поиск книги отца",
-            cost="5000000",
-            guild = gld,
-            customer = cstmr
-        )
-        
-        wizard_order = Wizard_Order.objects.create(
-            wizard = wzrd,
-            order = ordr
-        )
-
-        r = self.client.get('/api/wizard_order/')
-        data = r.json()
-        print(data)
-
-        assert wizard_order.wizard.id == data[0]['wizard']
-        assert wizard_order.order.id == data[0]['order']
-        assert len(data) == 1
-
-    def test_create_wizard_order(self):
-        wzrd = baker.make("Wizard")
-        ordr = baker.make("Order")
-
-        r = self.client.post("/api/wizard_order/", {
-            "wizard": wzrd.id,
-            "order": ordr.id
-        })
-
-        new_wizard_order_id = r.json()['id']
-        wizard_orders = Wizard_Order.objects.all()
-        assert len(wizard_orders) == 1
-
-        new_wizard_order = Wizard_Order.objects.filter(id=new_wizard_order_id).first()
-        assert new_wizard_order.wizard == wzrd
-        assert new_wizard_order.order == ordr
-
-    def test_delete_wizard_order(self):
-        wizard_orders = baker.make("Wizard_Order", 10)
-        r = self.client.get('/api/wizard_order/')
-        data = r.json()
-        assert len(data) == 10
-
-        wizard_order_id_to_delete = wizard_orders[3].id
-        self.client.delete(f'/api/wizard_order/{wizard_order_id_to_delete}/')
-
-        r = self.client.get('/api/wizard_order/')
-        data = r.json()
-        assert len(data) == 9
-
-        assert wizard_order_id_to_delete not in [i['id'] for i in data]

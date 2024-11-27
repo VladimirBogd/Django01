@@ -22,7 +22,7 @@ from django.conf.urls.static import static
 from wizards import views
 from rest_framework.routers import DefaultRouter
 
-from wizards.api import WizardsViewset, GuildsViewset, TeamsViewset, CustomersViewset, OrdersViewset, Wizard_OrderViewset, OrderStatusViewset, UserViewset
+from wizards.api import WizardsViewset, GuildsViewset, TeamsViewset, CustomersViewset, OrdersViewset, OrderStatusViewset, UserViewset
 
 router = DefaultRouter()
 router.register("wizards", WizardsViewset, basename="wizards")
@@ -30,7 +30,6 @@ router.register("guilds", GuildsViewset, basename="guilds")
 router.register("teams", TeamsViewset, basename="teams")
 router.register("customers", CustomersViewset, basename="customers")
 router.register("orders", OrdersViewset, basename="orders")
-router.register("wizard_order", Wizard_OrderViewset, basename="wizard_order")
 router.register("users", UserViewset, basename="user")
 router.register("order-statuses", OrderStatusViewset, basename="order-statuses")
 

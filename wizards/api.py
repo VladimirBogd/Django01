@@ -3,8 +3,8 @@ from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from django.contrib.auth import authenticate, login, logout
 from rest_framework.response import Response
-from wizards.models import Wizard, Guild, Order, Customer, Wizard_Order, Team
-from wizards.serializers import WizardSerializer, GuildSerializer, TeamSerializer, OrderSerializer, CustomerSerializer, Wizard_OrderSerializer
+from wizards.models import Wizard, Guild, Order, Customer, Team
+from wizards.serializers import WizardSerializer, GuildSerializer, TeamSerializer, OrderSerializer, CustomerSerializer
 
 class GuildsViewset(
     mixins.CreateModelMixin,
@@ -74,19 +74,6 @@ class OrdersViewset(
         # фильтруем по текущему юзеру
         qs = qs.filter(user=self.request.user)
         return qs
-# ----------------------------------------------------------------------------------------------------
-
-
-class Wizard_OrderViewset(
-    mixins.CreateModelMixin,
-    mixins.RetrieveModelMixin,
-    mixins.UpdateModelMixin,
-    mixins.DestroyModelMixin,
-    mixins.ListModelMixin,
-    GenericViewSet
-):
-    queryset = Wizard_Order.objects.all()
-    serializer_class = Wizard_OrderSerializer
 # ----------------------------------------------------------------------------------------------------
 
 

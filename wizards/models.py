@@ -71,11 +71,3 @@ class Order(models.Model):
 
   def __str__(self) -> str:
     return self.name
-#---------------------------------------------------------------------------------------------------- 
-class Wizard_Order(models.Model):
-  wizard = models.ForeignKey("Wizard", on_delete=models.CASCADE, null=True)
-  order = models.ForeignKey("Order", on_delete=models.CASCADE, null=True)
-
-  class Meta:
-    verbose_name = "Волшебник_Заказ"
-    verbose_name_plural = "Волшебник_Заказ"

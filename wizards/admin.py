@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from wizards.models import Wizard, Guild, Order, Customer, Wizard_Order, Team
+from wizards.models import Wizard, Guild, Order, Customer, Team
 
 # Register your models here.
 @admin.register(Guild)
@@ -22,7 +22,3 @@ class CustomerAdmin(admin.ModelAdmin):
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
   list_display = ['id', 'name', 'cost', 'status', 'customer', 'guild', 'team']
-#----------------------------------------------------------------------------------------------------
-@admin.register(Wizard_Order)
-class Wizard_OrderAdmin(admin.ModelAdmin):
-  list_display = ['id', 'wizard', 'order']

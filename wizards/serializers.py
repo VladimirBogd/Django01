@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from wizards.models import Wizard, Guild, Order, Customer, Wizard_Order, Team
+from wizards.models import Wizard, Guild, Order, Customer, Team
 
 class GuildSerializer(serializers.ModelSerializer):
   class Meta:
@@ -38,10 +38,3 @@ class OrderSerializer(serializers.ModelSerializer):
   class Meta:
     model = Order
     fields = ['id', 'name', 'cost', 'status', 'customer', 'guild', 'team', 'user']
-#----------------------------------------------------------------------------------------------------
-class Wizard_OrderSerializer(serializers.ModelSerializer):
-  wizard = serializers.PrimaryKeyRelatedField(queryset=Wizard.objects.all(), required=True)
-  order = serializers.PrimaryKeyRelatedField(queryset=Order.objects.all(), required=True)
-  class Meta:
-    model = Wizard_Order
-    fields = ['id', 'wizard', 'order']
