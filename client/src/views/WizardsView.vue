@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeMount, ref } from "vue";
+import { computed, onBeforeMount, ref, defineProps } from "vue";
 import axios from "axios";
 import Cookies from "js-cookie";
 import _ from "lodash";
@@ -51,7 +51,22 @@ async function fetchWizards() {
 async function onWizardAdd() {
   const formData = new FormData();
 
-  formData.append("picture", wizardAddPictureRef.value.files[0]);
+  if (wizardAddPictureRef.value.files[0]) {
+    formData.set("picture", wizardAddPictureRef.value.files[0]);
+  }
+
+  // Проверяем, выбрана ли команда
+  if (!wizardToAdd.value.team) {
+    // Создаем новую команду с названием по ФИО волшебника
+    const teamName = `${wizardToAdd.value.name} (без команды)`;
+    // Создаем новую команду
+    const teamResponse = await axios.post("/api/teams/", {
+      name: teamName,
+      guild: wizardToAdd.value.guild,
+    });
+    // Получаем ID новой команды
+    wizardToAdd.value.team = teamResponse.data.id;
+  }
 
   formData.set("name", wizardToAdd.value.name);
   formData.set("guild", wizardToAdd.value.guild);
@@ -63,6 +78,7 @@ async function onWizardAdd() {
     },
   });
   await fetchWizards(); // переподтягиваю
+  await fetchTeams();
 }
 
 async function wizardsAddPictureChange() {
@@ -79,10 +95,29 @@ async function OnWizardEdit(wizard) {
 async function onWizardUpdate() {
   const formData = new FormData();
 
-  if (!hasWizardEditPicture.value) {
-    formData.set("picture", "");
-  } else if (wizardEditPictureRef.value.files[0]) {
+  if (hasWizardEditPicture.value && wizardEditPictureRef.value.files[0]) {
     formData.set("picture", wizardEditPictureRef.value.files[0]);
+  } else {
+    formData.set("picture", "");
+  }
+
+  const oldFullName = wizardToEdit.value.name;
+  const newFullName = wizardToEdit.value.name;
+
+  if (oldFullName != newFullName) {
+    const oldTeamName = `${newFullName} (без команды)`;
+    const existingTeam = teams.value.find(team => team.name === oldTeamName);
+
+    if (existingTeam) {
+      await axios.delete(`/api/teams/${existingTeam.id}/`);
+    }
+
+    const newTeamName = `${newFullName} (без команды)`;
+    const newTeamResponse = await axios.post("/api/teams/", {
+      name: newTeamName,
+      guild: wizardToEdit.value.guild,
+    });
+    wizardToEdit.value.team = newTeamResponse.data.id;
   }
 
   formData.set("name", wizardToEdit.value.name);
@@ -95,6 +130,7 @@ async function onWizardUpdate() {
     },
   });
   await fetchWizards();
+  await fetchTeams();
 }
 
 async function wizardEditPictureChange() {
@@ -150,7 +186,6 @@ function hideZoomImage() {
               type="file"
               ref="wizardAddPictureRef"
               @change="wizardsAddPictureChange"
-              required
             />
           </div>
           <div class="col-auto">
@@ -173,7 +208,7 @@ function hideZoomImage() {
           </div>
           <div class="col-auto">
             <div class="form-floating mb-3">
-              <select class="form-select" v-model="wizardToAdd.team" required>
+              <select class="form-select" v-model="wizardToAdd.team">
                 <option :value="t.id" :key="t.id" v-for="t in teams">
                   {{ t.name }}
                 </option>
