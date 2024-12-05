@@ -31,7 +31,9 @@ async function fetchCustomers() {
 async function onCustomerAdd() {
   const formData = new FormData();
 
-  formData.append("picture", customerAddPictureRef.value.files[0]);
+  if (customerAddPictureRef.value.files[0]) {
+    formData.set("picture", customerAddPictureRef.value.files[0]);
+  }
 
   formData.set("name", customerToAdd.value.name);
 
@@ -40,7 +42,7 @@ async function onCustomerAdd() {
       "Content-Type": "multipart/form-data",
     },
   });
-  await fetchCustomers(); // переподтягиваю
+  await fetchCustomers();
 }
 
 async function customerAddPictureChange() {
@@ -57,10 +59,10 @@ async function OnCustomerEdit(customer) {
 async function onCustomerUpdate() {
   const formData = new FormData();
 
-  if (!hasCustomerEditPicture.value) {
-    formData.set("picture", "");
-  } else if (customerEditPictureRef.value.files[0]) {
+  if (hasCustomerEditPicture.value && customerEditPictureRef.value.files[0]) {
     formData.set("picture", customerEditPictureRef.value.files[0]);
+  } else {
+    formData.set("picture", "");
   }
 
   formData.set("name", customerToEdit.value.name);
@@ -143,7 +145,7 @@ function hideZoomImage() {
       <div v-if="loading">Гружу...</div>
 
       <div>
-        <div v-for="item in customers" class="customer-item">
+        <div v-for="item in customers" :key="item.id" class="customer-item">
           <div>{{ item.name }}</div>
           <div v-show="item.picture">
             <img

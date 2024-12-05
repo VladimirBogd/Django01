@@ -2,6 +2,7 @@ from rest_framework.viewsets import GenericViewSet
 from rest_framework import mixins, viewsets
 from rest_framework.decorators import action
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.models import User
 from rest_framework.response import Response
 from wizards.models import Wizard, Guild, Order, Customer, Team
 from wizards.serializers import WizardSerializer, GuildSerializer, TeamSerializer, OrderSerializer, CustomerSerializer
@@ -72,8 +73,9 @@ class OrdersViewset(
     def get_queryset(self):
         qs = super().get_queryset()
         # фильтруем по текущему юзеру
-        qs = qs.filter(user=self.request.user)
-        return qs
+        if (self.request.user.is_superuser):
+            qs = qs.filter(user=self.request.user)
+            return qs
 # ----------------------------------------------------------------------------------------------------
 
 
@@ -99,6 +101,7 @@ class UserViewset(GenericViewSet):
             data.update({
                 "username": request.user.username,
                 "user_id": request.user.id,
+                "is_superuser": request.user.is_superuser,
             })
         return Response(data)
 

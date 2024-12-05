@@ -55,16 +55,12 @@ async function onWizardAdd() {
     formData.set("picture", wizardAddPictureRef.value.files[0]);
   }
 
-  // Проверяем, выбрана ли команда
   if (!wizardToAdd.value.team) {
-    // Создаем новую команду с названием по ФИО волшебника
     const teamName = `${wizardToAdd.value.name} (без команды)`;
-    // Создаем новую команду
     const teamResponse = await axios.post("/api/teams/", {
       name: teamName,
       guild: wizardToAdd.value.guild,
     });
-    // Получаем ID новой команды
     wizardToAdd.value.team = teamResponse.data.id;
   }
 
@@ -77,7 +73,7 @@ async function onWizardAdd() {
       "Content-Type": "multipart/form-data",
     },
   });
-  await fetchWizards(); // переподтягиваю
+  await fetchWizards();
   await fetchTeams();
 }
 
@@ -99,25 +95,6 @@ async function onWizardUpdate() {
     formData.set("picture", wizardEditPictureRef.value.files[0]);
   } else {
     formData.set("picture", "");
-  }
-
-  const oldFullName = wizardToEdit.value.name;
-  const newFullName = wizardToEdit.value.name;
-
-  if (oldFullName != newFullName) {
-    const oldTeamName = `${newFullName} (без команды)`;
-    const existingTeam = teams.value.find(team => team.name === oldTeamName);
-
-    if (existingTeam) {
-      await axios.delete(`/api/teams/${existingTeam.id}/`);
-    }
-
-    const newTeamName = `${newFullName} (без команды)`;
-    const newTeamResponse = await axios.post("/api/teams/", {
-      name: newTeamName,
-      guild: wizardToEdit.value.guild,
-    });
-    wizardToEdit.value.team = newTeamResponse.data.id;
   }
 
   formData.set("name", wizardToEdit.value.name);

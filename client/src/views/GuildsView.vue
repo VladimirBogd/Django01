@@ -30,8 +30,10 @@ async function fetchGuilds() {
 
 async function onGuildAdd() {
   const formData = new FormData();
-
-  formData.append("picture", guildAddPictureRef.value.files[0]);
+  
+  if (guildAddPictureRef.value.files[0]) {
+    formData.set("picture", guildAddPictureRef.value.files[0]);
+  }
 
   formData.set("name", guildToAdd.value.name);
 
@@ -57,10 +59,10 @@ async function OnGuildEdit(guild) {
 async function onGuildUpdate() {
   const formData = new FormData();
 
-  if (!hasGuildEditPicture.value) {
-    formData.set("picture", "");
-  } else if (guildEditPictureRef.value.files[0]) {
+  if (!hasGuildEditPicture.value && guildEditPictureRef.value.files[0]) {
     formData.set("picture", guildEditPictureRef.value.files[0]);
+  } else {
+    formData.set("picture", "");
   }
 
   formData.set("name", guildToEdit.value.name);
