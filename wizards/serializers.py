@@ -26,15 +26,18 @@ class WizardSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         new_name = validated_data.get('name')
         new_team = validated_data.get('team')
-        
+
         # Если команда не указана, создаем новую команду
         if new_team is None:
             guild = validated_data['guild']
-            new_team_instance = Team.objects.create(guild=guild)  # Создаем команду без имени
+            new_team_instance = Team.objects.create(
+                guild=guild)  # Создаем команду без имени
             # Формируем название команды с использованием id
-            new_team_instance.name = f"{new_name} (без команды)_{new_team_instance.id}"  # Устанавливаем новое название
+            # Устанавливаем новое название
+            new_team_instance.name = f"{new_name} (без команды)_{new_team_instance.id}"
             new_team_instance.save()  # Сохраняем изменения
-            validated_data['team'] = new_team_instance  # Присваиваем экземпляр Team
+            # Присваиваем экземпляр Team
+            validated_data['team'] = new_team_instance
         elif "(без команды)_" in new_team.name:
             new_team.name = f"Команда {new_name}"
             new_team.save()
@@ -47,7 +50,7 @@ class WizardSerializer(serializers.ModelSerializer):
         old_team = instance.team
         new_name = validated_data.get('name')
         new_team = validated_data.get('team')
-        
+
         if old_team.name != f"{old_name} (без команды)_{old_team.id}":
             if old_name != new_name:
                 instance.name = new_name
@@ -55,8 +58,10 @@ class WizardSerializer(serializers.ModelSerializer):
                     # Если команда не указана, создаем новую команду
                     if new_team is None:
                         guild = validated_data.get('guild', instance.guild)
-                        new_team_instance = Team.objects.create(guild=guild)  # Создаем команду без имени
-                        new_team_instance.name = f"{new_name} (без команды)_{new_team_instance.id}"  # Устанавливаем новое название
+                        new_team_instance = Team.objects.create(
+                            guild=guild)  # Создаем команду без имени
+                        # Устанавливаем новое название
+                        new_team_instance.name = f"{new_name} (без команды)_{new_team_instance.id}"
                         new_team_instance.save()  # Сохраняем изменения
                         instance.team = new_team_instance
                     elif "(без команды)_" in new_team.name:
@@ -64,7 +69,7 @@ class WizardSerializer(serializers.ModelSerializer):
                         new_team.save()
                         instance.team = new_team
                     else:
-                        instance.team = new_team        
+                        instance.team = new_team
                     if old_team.wizard_set.count() == 1:
                         old_team.delete()
             else:
@@ -72,8 +77,10 @@ class WizardSerializer(serializers.ModelSerializer):
                     # Если команда не указана, создаем новую команду
                     if new_team is None:
                         guild = validated_data.get('guild', instance.guild)
-                        new_team_instance = Team.objects.create(guild=guild)  # Создаем команду без имени
-                        new_team_instance.name = f"{new_name} (без команды)_{new_team_instance.id}"  # Устанавливаем новое название
+                        new_team_instance = Team.objects.create(
+                            guild=guild)  # Создаем команду без имени
+                        # Устанавливаем новое название
+                        new_team_instance.name = f"{new_name} (без команды)_{new_team_instance.id}"
                         new_team_instance.save()  # Сохраняем изменения
                         instance.team = new_team_instance
                     elif "(без команды)_" in new_team.name:
@@ -81,7 +88,7 @@ class WizardSerializer(serializers.ModelSerializer):
                         new_team.save()
                         instance.team = new_team
                     else:
-                        instance.team = new_team        
+                        instance.team = new_team
                     if old_team.wizard_set.count() == 1:
                         old_team.delete()
         else:
@@ -112,7 +119,6 @@ class WizardSerializer(serializers.ModelSerializer):
                         instance.team = new_team
                     if old_team.wizard_set.count() == 1:
                         old_team.delete()
-                
 
         # Обновляем гильдию и изображение
         instance.guild = validated_data.get('guild', instance.guild)

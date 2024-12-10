@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeMount, ref, defineProps } from "vue";
+import { computed, onBeforeMount, ref, defineProps, watch } from "vue";
 import axios from "axios";
 import Cookies from "js-cookie";
 import _ from "lodash";
@@ -15,6 +15,8 @@ const teams = ref([]);
 const wizards = ref([]);
 const wizardToAdd = ref({});
 const wizardToEdit = ref({});
+
+const filteredTeams = ref([]); // Хранит команды, привязанные к выбранной гильдии
 
 const wizardAddPictureRef = ref();
 const wizardEditPictureRef = ref();
@@ -140,6 +142,20 @@ function showZoomImage(imageUrl) {
 function hideZoomImage() {
   showZoomImageContainer.value = false;
 }
+
+// Метод для обновления команд в зависимости от выбранной гильдии
+function updateTeams() {
+  if (wizardToAdd.value.guild) {
+    filteredTeams.value = teams.value.filter(
+      (team) => team.guild === wizardToAdd.value.guild
+    );
+    wizardToAdd.value.team = null; // Сбрасываем выбранную команду
+  } else {
+    filteredTeams.value = []; // Если гильдия не выбрана, очищаем команды
+  }
+}
+// Устанавливаем реактивный обработчик для выбора гильдии
+watch(wizardToAdd.guild, updateTeams);
 </script>
 
 <template>
@@ -176,7 +192,12 @@ function hideZoomImage() {
           </div>
           <div class="col-auto">
             <div class="form-floating mb-3">
-              <select class="form-select" v-model="wizardToAdd.guild" required>
+              <select
+                class="form-select"
+                v-model="wizardToAdd.guild"
+                @change="updateTeams"
+                required
+              >
                 <option v-for="g in guilds" :key="g.id" :value="g.id">
                   {{ g.name }}
                 </option>
@@ -186,9 +207,14 @@ function hideZoomImage() {
           </div>
           <div class="col-auto">
             <div class="form-floating mb-3">
-              <select class="form-select" v-model="wizardToAdd.team" required>
+              <select
+                class="form-select"
+                v-model="wizardToAdd.team"
+                :disabled="!wizardToAdd.guild"
+                required
+              >
                 <option :value="null">Нет команды</option>
-                <option v-for="t in teams" :key="t.id" :value="t.id">
+                <option v-for="t in filteredTeams" :key="t.id" :value="t.id">
                   {{ t.name }}
                 </option>
               </select>
@@ -264,11 +290,7 @@ function hideZoomImage() {
                 <div class="col-auto">
                   <div class="form-floating mb-3">
                     <select class="form-select" v-model="wizardToEdit.guild">
-                      <option
-                        v-for="g in guilds"
-                        v-bind:key="g.id"
-                        :value="g.id"
-                      >
+                      <option v-for="g in guilds" :key="g.id" :value="g.id">
                         {{ g.name }}
                       </option>
                     </select>
@@ -279,11 +301,7 @@ function hideZoomImage() {
                   <div class="form-floating mb-3">
                     <select class="form-select" v-model="wizardToEdit.team">
                       <option :value="null">Нет команды</option>
-                      <option
-                        v-for="t in teams"
-                        v-bind:key="t.id"
-                        :value="t.id"
-                      >
+                      <option v-for="t in teams" :key="t.id" :value="t.id">
                         {{ t.name }}
                       </option>
                     </select>
