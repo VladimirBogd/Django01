@@ -26,27 +26,93 @@ class WizardSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         new_name = validated_data.get('name')
         new_team = validated_data.get('team')
-
+        
         # Если команда не указана, создаем новую команду
         if new_team is None:
-            team_name = f"{new_name} (без команды)"
             guild = validated_data['guild']
-            new_team_instance = Team.objects.create(name=team_name, guild=guild)
+            new_team_instance = Team.objects.create(guild=guild)  # Создаем команду без имени
+            # Формируем название команды с использованием id
+            new_team_instance.name = f"{new_name} (без команды)_{new_team_instance.id}"  # Устанавливаем новое название
+            new_team_instance.save()  # Сохраняем изменения
             validated_data['team'] = new_team_instance  # Присваиваем экземпляр Team
-
-        # Если команда указана, получаем экземпляр Team
-        elif isinstance(new_team, int):  # Проверяем, что это ID
-            validated_data['team'] = Team.objects.get(pk=new_team)
-
+        elif "(без команды)_" in new_team.name:
+            new_team.name = f"Команда {new_name}"
+            new_team.save()
+            validated_data['team'] = new_team
         # Создаем волшебника с обновленными данными
         return super().create(validated_data)
 
     def update(self, instance, validated_data):
-        # Обновляем имя и команду
-        instance.name = validated_data.get('name', instance.name)
-        new_team = validated_data.get('team', instance.team)
-
-        self._handle_team_update(instance, new_team)
+        old_name = instance.name
+        old_team = instance.team
+        new_name = validated_data.get('name')
+        new_team = validated_data.get('team')
+        
+        if old_team.name != f"{old_name} (без команды)_{old_team.id}":
+            if old_name != new_name:
+                instance.name = new_name
+                if old_team != new_team:
+                    # Если команда не указана, создаем новую команду
+                    if new_team is None:
+                        guild = validated_data.get('guild', instance.guild)
+                        new_team_instance = Team.objects.create(guild=guild)  # Создаем команду без имени
+                        new_team_instance.name = f"{new_name} (без команды)_{new_team_instance.id}"  # Устанавливаем новое название
+                        new_team_instance.save()  # Сохраняем изменения
+                        instance.team = new_team_instance
+                    elif "(без команды)_" in new_team.name:
+                        new_team.name = f"Команда {new_name}"
+                        new_team.save()
+                        instance.team = new_team
+                    else:
+                        instance.team = new_team        
+                    if old_team.wizard_set.count() == 1:
+                        old_team.delete()
+            else:
+                if old_team != new_team:
+                    # Если команда не указана, создаем новую команду
+                    if new_team is None:
+                        guild = validated_data.get('guild', instance.guild)
+                        new_team_instance = Team.objects.create(guild=guild)  # Создаем команду без имени
+                        new_team_instance.name = f"{new_name} (без команды)_{new_team_instance.id}"  # Устанавливаем новое название
+                        new_team_instance.save()  # Сохраняем изменения
+                        instance.team = new_team_instance
+                    elif "(без команды)_" in new_team.name:
+                        new_team.name = f"Команда {new_name}"
+                        new_team.save()
+                        instance.team = new_team
+                    else:
+                        instance.team = new_team        
+                    if old_team.wizard_set.count() == 1:
+                        old_team.delete()
+        else:
+            if old_name != new_name:
+                instance.name = new_name
+                if new_team is None or old_team == new_team:
+                    old_team.name = f"{new_name} (без команды)_{old_team.id}"
+                    old_team.save()
+                    instance.team = old_team
+                else:
+                    if "(без команды)_" in new_team.name:
+                        new_team.name = f"Команда {new_name}"
+                        new_team.save()
+                        instance.team = new_team
+                    else:
+                        instance.team = new_team
+                    if old_team.wizard_set.count() == 1:
+                        old_team.delete()
+            else:
+                if new_team is None:
+                    instance.team = old_team
+                elif old_team != new_team:
+                    if "(без команды)_" in new_team.name:
+                        new_team.name = f"Команда {new_name}"
+                        new_team.save()
+                        instance.team = new_team
+                    else:
+                        instance.team = new_team
+                    if old_team.wizard_set.count() == 1:
+                        old_team.delete()
+                
 
         # Обновляем гильдию и изображение
         instance.guild = validated_data.get('guild', instance.guild)
@@ -54,27 +120,6 @@ class WizardSerializer(serializers.ModelSerializer):
 
         instance.save()
         return instance
-
-    def _handle_team_update(self, instance, new_team):
-        old_team = instance.team
-
-        # Проверяем, если старая команда существует и в ней больше нет волшебников
-        if old_team and old_team.wizard_set.count() == 0:
-            old_team.delete()
-
-        # Если новая команда равна None, устанавливаем команду как None
-        if new_team is None or new_team == "":
-            instance.team = None
-        else:
-            # Предполагается, что new_team - это ID команды
-            instance.team = Team.objects.get(id=new_team)
-
-        # Если команда не была указана, создаем новую команду
-        if instance.team is None:
-            instance.team = Team.objects.create(
-                name=f"{instance.name} (без команды)",
-                guild=instance.guild
-            )
 
     class Meta:
         model = Wizard

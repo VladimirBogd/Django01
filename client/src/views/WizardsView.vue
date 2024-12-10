@@ -56,11 +56,11 @@ async function onWizardAdd() {
   }
 
   formData.set("name", wizardToAdd.value.name);
-  formData.set("guild", wizardToAdd.value.guild);  
+  formData.set("guild", wizardToAdd.value.guild);
 
   // Проверяем, задано ли значение team, и добавляем его
   if (wizardToAdd.value.team) {
-    formData.set("team", teamValue);
+    formData.set("team", wizardToAdd.value.team);
   }
 
   try {
@@ -98,7 +98,9 @@ async function onWizardUpdate() {
 
   formData.set("name", wizardToEdit.value.name);
   formData.set("guild", wizardToEdit.value.guild);
-  formData.set("team", wizardToEdit.value.team);
+  if (wizardToEdit.value.team) {
+    formData.set("team", wizardToEdit.value.team);
+  }
 
   await axios.put(`/api/wizards/${wizardToEdit.value.id}/`, formData, {
     headers: {
@@ -175,7 +177,7 @@ function hideZoomImage() {
           <div class="col-auto">
             <div class="form-floating mb-3">
               <select class="form-select" v-model="wizardToAdd.guild" required>
-                <option :value="g.id" :key="g.id" v-for="g in guilds">
+                <option v-for="g in guilds" :key="g.id" :value="g.id">
                   {{ g.name }}
                 </option>
               </select>
@@ -184,9 +186,9 @@ function hideZoomImage() {
           </div>
           <div class="col-auto">
             <div class="form-floating mb-3">
-              <select class="form-select" v-model="wizardToAdd.team">
-                <option value="">Нет команды</option>
-                <option :value="t.id" :key="t.id" v-for="t in teams">
+              <select class="form-select" v-model="wizardToAdd.team" required>
+                <option :value="null">Нет команды</option>
+                <option v-for="t in teams" :key="t.id" :value="t.id">
                   {{ t.name }}
                 </option>
               </select>
@@ -263,9 +265,9 @@ function hideZoomImage() {
                   <div class="form-floating mb-3">
                     <select class="form-select" v-model="wizardToEdit.guild">
                       <option
-                        :value="g.id"
                         v-for="g in guilds"
                         v-bind:key="g.id"
+                        :value="g.id"
                       >
                         {{ g.name }}
                       </option>
@@ -276,8 +278,12 @@ function hideZoomImage() {
                 <div class="col-auto">
                   <div class="form-floating mb-3">
                     <select class="form-select" v-model="wizardToEdit.team">
-                      <option value="">Нет команды</option>
-                      <option :value="t.id" :key="t.id" v-for="t in teams">
+                      <option :value="null">Нет команды</option>
+                      <option
+                        v-for="t in teams"
+                        v-bind:key="t.id"
+                        :value="t.id"
+                      >
                         {{ t.name }}
                       </option>
                     </select>
