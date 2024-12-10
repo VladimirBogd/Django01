@@ -55,26 +55,25 @@ async function onWizardAdd() {
     formData.set("picture", wizardAddPictureRef.value.files[0]);
   }
 
-  if (!wizardToAdd.value.team) {
-    const teamName = `${wizardToAdd.value.name} (без команды)`;
-    const teamResponse = await axios.post("/api/teams/", {
-      name: teamName,
-      guild: wizardToAdd.value.guild,
-    });
-    wizardToAdd.value.team = teamResponse.data.id;
+  formData.set("name", wizardToAdd.value.name);
+  formData.set("guild", wizardToAdd.value.guild);  
+
+  // Проверяем, задано ли значение team, и добавляем его
+  if (wizardToAdd.value.team) {
+    formData.set("team", teamValue);
   }
 
-  formData.set("name", wizardToAdd.value.name);
-  formData.set("guild", wizardToAdd.value.guild);
-  formData.set("team", wizardToAdd.value.team);
-
-  await axios.post("/api/wizards/", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
-  await fetchWizards();
-  await fetchTeams();
+  try {
+    await axios.post("/api/wizards/", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    await fetchWizards();
+    await fetchTeams();
+  } catch (error) {
+    console.error("Ошибка при создании волшебника:", error);
+  }
 }
 
 async function wizardsAddPictureChange() {
@@ -186,6 +185,7 @@ function hideZoomImage() {
           <div class="col-auto">
             <div class="form-floating mb-3">
               <select class="form-select" v-model="wizardToAdd.team">
+                <option value="">Нет команды</option>
                 <option :value="t.id" :key="t.id" v-for="t in teams">
                   {{ t.name }}
                 </option>
@@ -276,6 +276,7 @@ function hideZoomImage() {
                 <div class="col-auto">
                   <div class="form-floating mb-3">
                     <select class="form-select" v-model="wizardToEdit.team">
+                      <option value="">Нет команды</option>
                       <option :value="t.id" :key="t.id" v-for="t in teams">
                         {{ t.name }}
                       </option>
