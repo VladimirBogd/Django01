@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeMount, ref } from "vue";
+import { computed, onBeforeMount, ref, watch } from "vue";
 import axios from "axios";
 import Cookies from "js-cookie";
 import _ from "lodash";
@@ -11,6 +11,9 @@ const userStore = useUserStore();
 // Проверка, вошел ли пользователь в систему
 const isLoggedIn = computed(() => {
   return userStore.isAuthenticated; // Используем isAuthenticated из userStore
+});
+const isSuperUser = computed(() => {
+  return userStore.isSuperUser;
 });
 
 onBeforeMount(() => {
@@ -26,6 +29,9 @@ const guilds = ref([]);
 const customers = ref([]);
 const orderToAdd = ref({});
 const orderToEdit = ref({});
+
+const selectedGuild = ref(null); // Хранит выбранную гильдию
+const filteredTeams = ref([]); // Хранит команды, привязанные к выбранной гильдии
 
 async function fetchOrderStatuses() {
   const r = await axios.get("/api/order-statuses/");
@@ -91,18 +97,33 @@ async function OnOrderRemove(order) {
 }
 
 onBeforeMount(async () => {
-  await fetchOrders();
-  await fetchTeams();
-  await fetchGuilds();
-  await fetchCustomers();
-  await fetchOrderStatuses();
+  await Promise.all([
+    fetchOrders(),
+    fetchTeams(),
+    fetchGuilds(),
+    fetchCustomers(),
+    fetchOrderStatuses(),
+  ]);
 });
+
+function updateTeams() {
+  if (selectedGuild.value) {
+    filteredTeams.value = teams.value.filter(
+      (team) => team.guild === selectedGuild.value
+    );
+    orderToAdd.value.guild = selectedGuild.value;
+  } else {
+    filteredTeams.value = []; // Если гильдия не выбрана, очищаем команды
+  }
+}
+// Устанавливаем реактивный обработчик для выбора гильдии
+watch(selectedGuild, updateTeams);
 </script>
 
 <template>
   <div class="container-fluid">
-    <form v-if="isLoggedIn">
-      <div class="p-2">
+    <div class="p-2">
+      <div v-if="isLoggedIn">
         <form @submit.prevent.stop="onOrderAdd">
           <div class="row">
             <div class="col">
@@ -131,6 +152,7 @@ onBeforeMount(async () => {
                 <select
                   class="form-select"
                   v-model="orderToAdd.status"
+                  disabled
                   required
                 >
                   <option :key="s.id" :value="s.id" v-for="s in orderStatuses">
@@ -142,7 +164,12 @@ onBeforeMount(async () => {
             </div>
             <div class="col-auto">
               <div class="form-floating mb-3">
-                <select class="form-select" v-model="orderToAdd.guild" required>
+                <select
+                  class="form-select"
+                  v-model="selectedGuild"
+                  @change="updateTeams"
+                  required
+                >
                   <option :key="g.id" :value="g.id" v-for="g in guilds">
                     {{ g.name }}
                   </option>
@@ -152,8 +179,13 @@ onBeforeMount(async () => {
             </div>
             <div class="col-auto">
               <div class="form-floating mb-3">
-                <select class="form-select" v-model="orderToAdd.team" required>
-                  <option :key="t.id" :value="t.id" v-for="t in teams">
+                <select
+                  class="form-select"
+                  v-model="orderToAdd.team"
+                  :disabled="!selectedGuild"
+                  required
+                >
+                  <option :key="t.id" :value="t.id" v-for="t in filteredTeams">
                     {{ t.name }}
                   </option>
                 </select>
@@ -182,26 +214,24 @@ onBeforeMount(async () => {
 
         <div v-if="loading">Гружу...</div>
 
-        <div>
-          <div v-for="item in orders" :key="item.id" class="order-item">
-            <div>{{ item.name }}</div>
-            <div>{{ item.cost }}</div>
-            <div>{{ item.status }}</div>
-            <div>{{ teamsById[item.team]?.name }}</div>
-            <div>{{ guildsById[item.guild]?.name }}</div>
-            <div>{{ customersById[item.customer]?.name }}</div>
-            <button
-              class="btn btn-success"
-              @click="OnOrderEdit(item)"
-              data-bs-toggle="modal"
-              data-bs-target="#editOrderModal"
-            >
-              <i class="bi bi-pencil"></i>
-            </button>
-            <button class="btn btn-danger" @click="OnOrderRemove(item)">
-              <i class="bi bi-x"></i>
-            </button>
-          </div>
+        <div v-for="item in orders" :key="item.id" class="order-item">
+          <div>{{ item.name }}</div>
+          <div>{{ item.cost }}</div>
+          <div>{{ item.status }}</div>
+          <div>{{ teamsById[item.team]?.name }}</div>
+          <div>{{ guildsById[item.guild]?.name }}</div>
+          <div>{{ customersById[item.customer]?.name }}</div>
+          <button
+            class="btn btn-success"
+            @click="OnOrderEdit(item)"
+            data-bs-toggle="modal"
+            data-bs-target="#editOrderModal"
+          >
+            <i class="bi bi-pencil"></i>
+          </button>
+          <button class="btn btn-danger" @click="OnOrderRemove(item)">
+            <i class="bi bi-x"></i>
+          </button>
         </div>
 
         <div
@@ -329,8 +359,8 @@ onBeforeMount(async () => {
           </div>
         </div>
       </div>
-    </form>
-    <form form v-else class="container-fluid">Вы не авторизованы</form>
+      <div v-else>Вы не авторизованы</div>
+    </div>
   </div>
 </template>
 

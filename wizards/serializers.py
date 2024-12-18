@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
-from wizards.models import Wizard, Guild, Order, Customer, Team, User
+from django.contrib.auth.models import User
+from wizards.models import Wizard, Guild, Order, Customer, Team
 
 
 class GuildSerializer(serializers.ModelSerializer):
@@ -134,9 +135,34 @@ class WizardSerializer(serializers.ModelSerializer):
 
 
 class CustomerSerializer(serializers.ModelSerializer):
+    user_id = serializers.IntegerField(source='user.id', read_only=True)
+    password = serializers.CharField(write_only=True)  # Добавляем поле для пароля
+
     class Meta:
         model = Customer
-        fields = ['id', 'name', 'picture']
+        fields = ['id', 'user_id', 'username', 'email', 'picture', 'password']
+
+    def create(self, validated_data):
+        # Извлекаем данные для пользователя
+        password = validated_data.pop('password')  # Извлекаем пароль
+        username = validated_data.pop('username')
+        email = validated_data.pop('email')
+
+        # Создаем нового пользователя
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password  # Убедитесь, что пароль передан
+        )
+        # Создание объекта Customer с username и email
+        customer = Customer.objects.create(
+            user=user,
+            username=username,  # Добавляем username в объект Customer
+            email=email,        # Добавляем email в объект Customer
+            **validated_data    # Остальные данные, которые могли быть переданы
+        )
+
+        return customer
 # ----------------------------------------------------------------------------------------------------
 
 
@@ -163,4 +189,4 @@ class OrderSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'name']
+        fields = ['id', 'username', 'email', 'first_name', 'last_name']

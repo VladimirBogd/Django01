@@ -16,6 +16,7 @@ const wizards = ref([]);
 const wizardToAdd = ref({});
 const wizardToEdit = ref({});
 
+const selectedGuild = ref(null); // Хранит выбранную гильдию
 const filteredTeams = ref([]); // Хранит команды, привязанные к выбранной гильдии
 
 const wizardAddPictureRef = ref();
@@ -143,19 +144,18 @@ function hideZoomImage() {
   showZoomImageContainer.value = false;
 }
 
-// Метод для обновления команд в зависимости от выбранной гильдии
 function updateTeams() {
-  if (wizardToAdd.value.guild) {
+  if (selectedGuild.value) {
     filteredTeams.value = teams.value.filter(
-      (team) => team.guild === wizardToAdd.value.guild
+      (team) => team.guild === selectedGuild.value
     );
-    wizardToAdd.value.team = null; // Сбрасываем выбранную команду
+    wizardToAdd.value.guild = selectedGuild.value;
   } else {
     filteredTeams.value = []; // Если гильдия не выбрана, очищаем команды
   }
 }
 // Устанавливаем реактивный обработчик для выбора гильдии
-watch(wizardToAdd.guild, updateTeams);
+watch(selectedGuild, updateTeams);
 </script>
 
 <template>
@@ -194,7 +194,7 @@ watch(wizardToAdd.guild, updateTeams);
             <div class="form-floating mb-3">
               <select
                 class="form-select"
-                v-model="wizardToAdd.guild"
+                v-model="selectedGuild"
                 @change="updateTeams"
                 required
               >
@@ -210,7 +210,7 @@ watch(wizardToAdd.guild, updateTeams);
               <select
                 class="form-select"
                 v-model="wizardToAdd.team"
-                :disabled="!wizardToAdd.guild"
+                :disabled="!selectedGuild"
                 required
               >
                 <option :value="null">Нет команды</option>
@@ -289,7 +289,10 @@ watch(wizardToAdd.guild, updateTeams);
                 </div>
                 <div class="col-auto">
                   <div class="form-floating mb-3">
-                    <select class="form-select" v-model="wizardToEdit.guild">
+                    <select
+                      class="form-select"
+                      v-model="wizardToEdit.guild"
+                    >
                       <option v-for="g in guilds" :key="g.id" :value="g.id">
                         {{ g.name }}
                       </option>
@@ -299,7 +302,10 @@ watch(wizardToAdd.guild, updateTeams);
                 </div>
                 <div class="col-auto">
                   <div class="form-floating mb-3">
-                    <select class="form-select" v-model="wizardToEdit.team">
+                    <select
+                      class="form-select"
+                      v-model="wizardToEdit.team"
+                    >
                       <option :value="null">Нет команды</option>
                       <option v-for="t in teams" :key="t.id" :value="t.id">
                         {{ t.name }}

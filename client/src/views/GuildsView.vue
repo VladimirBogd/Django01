@@ -59,7 +59,7 @@ async function OnGuildEdit(guild) {
 async function onGuildUpdate() {
   const formData = new FormData();
 
-  if (!hasGuildEditPicture.value && guildEditPictureRef.value.files[0]) {
+  if (hasGuildEditPicture.value && guildEditPictureRef.value.files[0]) {
     formData.set("picture", guildEditPictureRef.value.files[0]);
   } else {
     formData.set("picture", "");
@@ -146,7 +146,7 @@ function hideZoomImage() {
       <div v-if="loading">Гружу...</div>
 
       <div>
-        <div v-for="item in guilds" class="guild-item">
+        <div v-for="item in guilds" :key="item.id" class="guild-item">
           <div>{{ item.name }}</div>
           <div v-show="item.picture">
             <img

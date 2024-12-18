@@ -5,7 +5,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from rest_framework.response import Response
 from wizards.models import Wizard, Guild, Order, Customer, Team
-from wizards.serializers import WizardSerializer, GuildSerializer, TeamSerializer, OrderSerializer, CustomerSerializer
+from wizards.serializers import WizardSerializer, GuildSerializer, TeamSerializer, OrderSerializer, CustomerSerializer, UserSerializer
 
 class GuildsViewset(
     mixins.CreateModelMixin,
@@ -56,6 +56,10 @@ class CustomersViewset(
 ):
     queryset = Customer.objects.all()
     serializer_class = CustomerSerializer
+    
+    def perform_create(self, serializer):
+        # Здесь можно не указывать user, если он создается в сериализаторе
+        serializer.save()
 # ----------------------------------------------------------------------------------------------------
 
 
@@ -74,6 +78,8 @@ class OrdersViewset(
         qs = super().get_queryset()
         # фильтруем по текущему юзеру
         if (self.request.user.is_superuser):
+            return qs
+        else:
             qs = qs.filter(user=self.request.user)
             return qs
 # ----------------------------------------------------------------------------------------------------
@@ -91,7 +97,33 @@ class OrderStatusViewset(viewsets.ViewSet):
 # ----------------------------------------------------------------------------------------------------
 
 
-class UserViewset(GenericViewSet):
+class UserViewset(
+    mixins.CreateModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+    mixins.ListModelMixin,
+    GenericViewSet):
+    
+    queryset = User.objects.all()
+    serializer_class = UserSerializer
+    
+    # Новый метод для получения списка пользователей
+    def list(self, request, *args, **kwargs):
+        if not request.user.is_superuser:
+            return Response({"error": "Недостаточно прав доступа."}, status=403)
+        
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+    
+    @action(url_path="my-customers", methods=["GET"], detail=False)
+    def my_customers(self, request, *args, **kwargs):
+        customers = Customer.objects.filter(user=request.user)
+        serializer = CustomerSerializer(customers, many=True)
+        return Response(serializer.data)
+
+    
     @action(url_path="info", methods=["GET"], detail=False)
     def get_info(self, request, *args, **kwargs):
         data = {
@@ -99,9 +131,9 @@ class UserViewset(GenericViewSet):
         }
         if request.user.is_authenticated:
             data.update({
+                "is_superuser": request.user.is_superuser,
                 "username": request.user.username,
                 "user_id": request.user.id,
-                "is_superuser": request.user.is_superuser,
             })
         return Response(data)
 

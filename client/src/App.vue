@@ -3,7 +3,7 @@ import { storeToRefs } from "pinia";
 import useUserStore from "./stores/userStore";
 
 const userStore = useUserStore();
-const { isAuthenticated, username, userId } = storeToRefs(userStore);
+const { isSuperUser, isAuthenticated, username, userId } = storeToRefs(userStore);
 </script>
 
 <template>
@@ -33,7 +33,7 @@ const { isAuthenticated, username, userId } = storeToRefs(userStore);
             <li class="nav-item">
               <router-link class="nav-link" to="/teams"> Команды </router-link>
             </li>
-            <li class="nav-item">
+            <li v-if="isSuperUser" class="nav-item">
               <router-link class="nav-link" to="/customers">
                 Заказчики
               </router-link>
@@ -44,7 +44,7 @@ const { isAuthenticated, username, userId } = storeToRefs(userStore);
           </ul>
           <form class="d-flex">
             <ul class="navbar-nav">
-              <li class="nav-item dropdown">
+              <li class="nav-item dropdown" style="margin-right: 50px">
                 <a
                   class="nav-link dropdown-toggle"
                   href="#"

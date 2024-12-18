@@ -5,7 +5,7 @@ from wizards.models import Wizard, Guild, Order, Customer, Team
 # Register your models here.
 @admin.register(Guild)
 class GuildAdmin(admin.ModelAdmin):
-  list_display = ['id', 'name']
+  list_display = ['id', 'name', 'picture']
 #----------------------------------------------------------------------------------------------------
 @admin.register(Team)
 class TeamAdmin(admin.ModelAdmin):
@@ -13,11 +13,11 @@ class TeamAdmin(admin.ModelAdmin):
 #----------------------------------------------------------------------------------------------------
 @admin.register(Wizard)
 class WizardAdmin(admin.ModelAdmin):
-  list_display = ['id', 'name', 'guild', 'team']
+  list_display = ['id', 'name', 'guild', 'team', 'picture']
 #----------------------------------------------------------------------------------------------------
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
-  list_display = ['id', 'name']
+  list_display = ['id', 'user_id', 'username', 'email', 'picture']
 #----------------------------------------------------------------------------------------------------
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):

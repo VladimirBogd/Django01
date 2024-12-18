@@ -31,7 +31,7 @@ router.register("teams", TeamsViewset, basename="teams")
 router.register("customers", CustomersViewset, basename="customers")
 router.register("orders", OrdersViewset, basename="orders")
 router.register("order-statuses", OrderStatusViewset, basename="order-statuses")
-router.register("users", UserViewset, basename="user")
+router.register("users", UserViewset, basename="users")
 
 urlpatterns = [
     path('', views.ShowWizardsView.as_view()),
