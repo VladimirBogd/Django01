@@ -4,13 +4,14 @@ import axios from "axios";
 import Cookies from "js-cookie";
 import _ from "lodash";
 
-import { useRouter } from "vue-router";
+import { storeToRefs } from "pinia";
+
 import useUserStore from "@/stores/userStore";
 
-const userStore = useUserStore();
 // Проверка, вошел ли пользователь в систему
-const isLoggedIn = computed(() => userStore.isAuthenticated);
-const isSuperUser = computed(() => userStore.isSuperUser);
+const userStore = useUserStore();
+const { isSuperUser, isAuthenticated, username, userId } =
+  storeToRefs(userStore);
 
 onBeforeMount(() => {
   axios.defaults.headers.common["X-CSRFToken"] = Cookies.get("csrftoken");
@@ -31,27 +32,21 @@ const hasCustomerEditPicture = ref(false);
 async function fetchCustomers() {
   loading.value = true;
   const r = await axios.get("/api/customers/");
-  console.log(r.data);
   customers.value = r.data;
   loading.value = false;
 }
 
 async function onCustomerAdd() {
-  console.log(customerToAdd.value); // Для отладки
   const formData = new FormData();
 
   if (customerAddPictureRef.value.files[0]) {
     formData.set("picture", customerAddPictureRef.value.files[0]);
   }
-
   formData.set("username", customerToAdd.value.username);
   formData.set("email", customerToAdd.value.email);
   formData.set("password", customerToAdd.value.password);
-
-  // Логируем данные FormData
-  for (const [key, value] of formData.entries()) {
-      console.log(key, value);
-  }
+  formData.set("first_name", customerToAdd.value.first_name);
+  formData.set("last_name", customerToAdd.value.last_name);
 
   try {
     await axios.post("/api/customers/", formData, {
@@ -60,8 +55,17 @@ async function onCustomerAdd() {
       },
     });
     await fetchCustomers();
+
+    // Очищаем поля после успешного добавления
+    customerToAdd.value.username = "";
+    customerToAdd.value.email = "";
+    customerToAdd.value.password = "";
+    customerToAdd.value.first_name = "";
+    customerToAdd.value.last_name = "";
+    customerAddPictureRef.value = "";
+    customerAddImageUrl.value = ""; // Если есть переменная для изображения
   } catch (error) {
-      console.error("Ошибка при создании клиента:", error);
+    console.error("Ошибка при создании клиента:", error);
   }
 }
 
@@ -87,6 +91,8 @@ async function onCustomerUpdate() {
 
   formData.set("username", customerToEdit.value.username);
   formData.set("email", customerToEdit.value.email);
+  formData.set("first_name", customerToEdit.value.first_name);
+  formData.set("last_name", customerToEdit.value.last_name);
 
   await axios.put(`/api/customers/${customerToEdit.value.id}/`, formData, {
     headers: {
@@ -128,189 +134,238 @@ function hideZoomImage() {
 <template>
   <div class="container-fluid">
     <div class="p-2">
-      <div v-if="isLoggedIn">
-        <form v-if="isSuperUser" @submit.prevent.stop="onCustomerAdd">
-          <div class="row">
-            <div class="col">
-              <div class="form-floating mb-3">
-                <input
-                  type="text"
-                  class="form-control"
-                  v-model="customerToAdd.username"
-                  required
-                />
-                <label for="floatingInput">Имя пользователя</label>
-              </div>
-            </div>
-            <div class="col">
-              <div class="form-floating mb-3">
-                <input
-                  type="email"
-                  class="form-control"
-                  v-model="customerToAdd.email"
-                  required
-                />
-                <label for="floatingInput">Электронная почта</label>
-              </div>
-            </div>
-            <div class="col">
-              <div class="form-floating mb-3">
-                <input
-                  type="password"
-                  class="form-control"
-                  v-model="customerToAdd.password"
-                  required
-                />
-                <label for="floatingInput">Пароль</label>
-              </div>
-            </div>
-            <div class="col-auto">
+      <form @submit.prevent.stop="onCustomerAdd">
+        <div class="row">
+          <div class="col">
+            <div class="form-floating mb-3">
               <input
+                type="text"
                 class="form-control"
-                type="file"
-                ref="customerAddPictureRef"
-                @change="customerAddPictureChange"
+                v-model="customerToAdd.username"
+                required
               />
-            </div>
-            <div class="col-auto">
-              <img
-                :src="customerAddImageUrl"
-                style="max-height: 60px"
-                alt="Изображение"
-                v-if="customerAddImageUrl"
-                @click="showZoomImage(customerAddImageUrl)"
-              />
-            </div>
-            <div class="col-auto">
-              <button class="btn btn-primary">Добавить</button>
+              <label for="floatingInput">Имя пользователя</label>
             </div>
           </div>
-        </form>
-
-        <div v-if="loading">Гружу...</div>
-
-        <div v-if="isSuperUser">
-          <div v-for="item in customers" :key="item.id" class="customer-item">
-            <div>{{ item.username }}</div>
-            <div>{{ item.email }}</div>
-            <div v-show="item.picture">
-              <img
-                :src="item.picture"
-                style="max-height: 60px"
-                @click="showZoomImage(item.picture)"
+          <div class="col">
+            <div class="form-floating mb-3">
+              <input
+                type="email"
+                class="form-control"
+                v-model="customerToAdd.email"
+                required
               />
+              <label for="floatingInput">Электронная почта</label>
             </div>
-            <button
-              class="btn btn-success"
-              @click="OnCustomerEdit(item)"
-              data-bs-toggle="modal"
-              data-bs-target="#editCustomerModal"
-            >
-              <i class="bi bi-pencil"></i>
-            </button>
-            <button class="btn btn-danger" @click="OnCustomerRemove(item)">
-              <i class="bi bi-x"></i>
-            </button>
+          </div>
+          <div class="col">
+            <div class="form-floating mb-3">
+              <input
+                type="password"
+                class="form-control"
+                v-model="customerToAdd.password"
+                required
+              />
+              <label for="floatingInput">Пароль</label>
+            </div>
+          </div>
+          <div class="col">
+            <div class="form-floating mb-3">
+              <input
+                type="text"
+                class="form-control"
+                v-model="customerToAdd.first_name"
+                required
+              />
+              <label for="floatingInput">Имя</label>
+            </div>
+          </div>
+          <div class="col">
+            <div class="form-floating mb-3">
+              <input
+                type="text"
+                class="form-control"
+                v-model="customerToAdd.last_name"
+                required
+              />
+              <label for="floatingInput">Фамилия</label>
+            </div>
+          </div>
+          <div class="col-auto">
+            <input
+              class="form-control"
+              type="file"
+              ref="customerAddPictureRef"
+              @change="customerAddPictureChange"
+            />
+          </div>
+          <div class="col-auto">
+            <img
+              :src="customerAddImageUrl"
+              style="max-height: 60px"
+              alt="Изображение"
+              v-if="customerAddImageUrl"
+              @click="showZoomImage(customerAddImageUrl)"
+            />
+          </div>
+          <div class="col-auto">
+            <button class="btn btn-primary">Добавить</button>
           </div>
         </div>
+      </form>
 
-        <div
-          class="modal fade"
-          id="editCustomerModal"
-          tabindex="-1"
-          aria-labelledby="editCustomerModalLabel"
-          aria-hidden="true"
+      <div v-if="loading">Гружу...</div>
+
+      <div v-for="item in customers" :key="item.id" class="customer-item">
+        <div>{{ item.username }}</div>
+        <div>{{ item.email }}</div>
+        <div>{{ item.first_name }}</div>
+        <div>{{ item.last_name }}</div>
+        <div v-show="item.picture">
+          <img
+            :src="item.picture"
+            style="max-height: 60px"
+            @click="showZoomImage(item.picture)"
+          />
+        </div>
+        <button
+          class="btn btn-success"
+          @click="OnCustomerEdit(item)"
+          data-bs-toggle="modal"
+          data-bs-target="#editCustomerModal"
         >
-          <div class="modal-dialog">
-            <div class="modal-content">
-              <div class="modal-header">
-                <h1 class="modal-title fs-5" id="editCustomerModalLabel">
-                  Редактировать
-                </h1>
-                <button
-                  type="button"
-                  class="btn-close"
-                  data-bs-dismiss="modal"
-                  aria-label="Close"
-                ></button>
-              </div>
-              <div class="modal-body">
-                <div class="row">
-                  <div class="col">
-                    <div class="form-floating mb-3">
-                      <input
-                        type="text"
-                        class="form-control"
-                        v-model="customerToEdit.username"
-                      />
-                      <label for="floatingInput">Имя пользователя</label>
-                    </div>
-                    <div class="form-floating mb-3">
-                      <input
-                        type="email"
-                        class="form-control"
-                        v-model="customerToEdit.email"
-                      />
-                      <label for="floatingInput">Электронная почта</label>
-                    </div>
-                    <div class="col-auto">
-                      <input
-                        class="form-control"
-                        type="file"
-                        ref="customerEditPictureRef"
-                        @change="customerEditPictureChange"
-                      />
-                    </div>
-                    <div class="col-auto">
-                      <button
-                        class="btn btn-danger"
-                        @click="
-                          hasCustomerEditPicture = false;
-                          customerEditImageUrl = '';
-                        "
-                      >
-                        Очистить
-                      </button>
-                    </div>
-                    <div class="col-auto">
-                      <img
-                        :src="customerEditImageUrl"
-                        style="max-height: 60px"
-                        alt="Изображение"
-                      />
-                    </div>
+          <i class="bi bi-pencil"></i>
+        </button>
+        <button class="btn btn-danger" @click="OnCustomerRemove(item)">
+          <i class="bi bi-x"></i>
+        </button>
+      </div>
+
+      <div
+        class="modal fade"
+        id="editCustomerModal"
+        tabindex="-1"
+        aria-labelledby="editCustomerModalLabel"
+        aria-hidden="true"
+      >
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h1 class="modal-title fs-5" id="editCustomerModalLabel">
+                Редактировать
+              </h1>
+              <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="Close"
+              ></button>
+            </div>
+            <div class="modal-body">
+              <div class="row">
+                <div class="col-auto">
+                  <div class="form-floating mb-3">
+                    <input
+                      type="text"
+                      class="form-control"
+                      v-model="customerToEdit.username"
+                      required
+                    />
+                    <label for="floatingInput">Имя пользователя</label>
+                  </div>
+                </div>
+                <div class="col">
+                  <div class="form-floating mb-3">
+                    <input
+                      type="email"
+                      class="form-control"
+                      v-model="customerToEdit.email"
+                      required
+                    />
+                    <label for="floatingInput">Электронная почта</label>
                   </div>
                 </div>
               </div>
-              <div class="modal-footer">
-                <button
-                  type="button"
-                  class="btn btn-secondary"
-                  data-bs-dismiss="modal"
-                >
-                  Закрыть
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-primary"
-                  data-bs-dismiss="modal"
-                  @click="onCustomerUpdate"
-                >
-                  Сохранить изменения
-                </button>
+              <div class="row">
+                <div class="col-auto">
+                  <div class="form-floating mb-3">
+                    <input
+                      type="text"
+                      class="form-control"
+                      v-model="customerToEdit.first_name"
+                      required
+                    />
+                    <label for="floatingInput">Имя</label>
+                  </div>
+                </div>
+                <div class="col">
+                  <div class="form-floating mb-3">
+                    <input
+                      type="text"
+                      class="form-control"
+                      v-model="customerToEdit.last_name"
+                      required
+                    />
+                    <label for="floatingInput">Фамилия</label>
+                  </div>
+                </div>
               </div>
+              <div class="col">
+                <input
+                  type="file"
+                  class="form-control"
+                  ref="customerEditPictureRef"
+                  @change="customerEditPictureChange"
+                />
+              </div>
+              <div class="row" style="margin-top: 1rem">
+                <div class="col-auto">
+                  <button
+                    class="btn btn-danger"
+                    @click="
+                      hasCustomerEditPicture = false;
+                      customerEditImageUrl = '';
+                    "
+                  >
+                    Очистить
+                  </button>
+                </div>
+                <div class="col-auto">
+                  <img
+                    :src="customerEditImageUrl"
+                    style="max-height: 60px"
+                    alt="Изображение"
+                  />
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button
+                type="button"
+                class="btn btn-secondary"
+                data-bs-dismiss="modal"
+              >
+                Закрыть
+              </button>
+              <button
+                type="button"
+                class="btn btn-primary"
+                data-bs-dismiss="modal"
+                @click="onCustomerUpdate"
+              >
+                Сохранить изменения
+              </button>
             </div>
           </div>
         </div>
-        <div
-          class="zoom-image-container"
-          :class="{ active: showZoomImageContainer }"
-          @click="hideZoomImage"
-        >
-          <img :src="zoomImageUrl" alt="Увеличенное изображение" />
-        </div>
       </div>
-      <div v-else>Вы не авторизованы</div>
+      <div
+        class="zoom-image-container"
+        :class="{ active: showZoomImageContainer }"
+        @click="hideZoomImage"
+      >
+        <img :src="zoomImageUrl" alt="Увеличенное изображение" />
+      </div>
     </div>
   </div>
 </template>
@@ -322,7 +377,7 @@ function hideZoomImage() {
   border: 1px solid silver;
   border-radius: 8px;
   display: grid;
-  grid-template-columns: 1fr auto auto auto;
+  grid-template-columns: 1fr auto auto auto auto auto;
   gap: 16px;
   align-items: center;
   align-content: center;

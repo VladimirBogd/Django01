@@ -136,33 +136,61 @@ class WizardSerializer(serializers.ModelSerializer):
 
 class CustomerSerializer(serializers.ModelSerializer):
     user_id = serializers.IntegerField(source='user.id', read_only=True)
-    password = serializers.CharField(write_only=True)  # Добавляем поле для пароля
+    password = serializers.CharField(write_only=True, required=False)  # Добавляем поле для пароля
 
     class Meta:
         model = Customer
-        fields = ['id', 'user_id', 'username', 'email', 'picture', 'password']
+        fields = ['id', 'user_id', 'username', 'first_name', 'last_name', 'email', 'picture', 'password']
 
     def create(self, validated_data):
         # Извлекаем данные для пользователя
         password = validated_data.pop('password')  # Извлекаем пароль
         username = validated_data.pop('username')
+        first_name = validated_data.pop('first_name')
+        last_name = validated_data.pop('last_name')
         email = validated_data.pop('email')
-
         # Создаем нового пользователя
         user = User.objects.create_user(
             username=username,
+            first_name=first_name,
+            last_name=last_name,
             email=email,
-            password=password  # Убедитесь, что пароль передан
+            password=password
         )
         # Создание объекта Customer с username и email
         customer = Customer.objects.create(
             user=user,
-            username=username,  # Добавляем username в объект Customer
-            email=email,        # Добавляем email в объект Customer
-            **validated_data    # Остальные данные, которые могли быть переданы
+            username=username,
+            first_name=first_name,
+            last_name=last_name,
+            email=email,
         )
-
         return customer
+    
+    def update(self, instance, validated_data):
+        # Извлечение данных пользователя
+        user_data = {
+            'username': validated_data.get('username', instance.user.username),
+            'first_name': validated_data.get('first_name', instance.user.first_name),
+            'last_name': validated_data.get('last_name', instance.user.last_name),
+            'email': validated_data.get('email', instance.user.email),
+        }
+
+        # Обновляем данные пользователя, если они переданы
+        for key, value in user_data.items():
+            setattr(instance.user, key, value)
+        instance.user.save()
+
+        # Обновляем поля Customer
+        instance.username = validated_data.get('username', instance.username)
+        instance.email = validated_data.get('email', instance.email)
+        instance.first_name = validated_data.get('first_name', instance.first_name)
+        instance.last_name = validated_data.get('last_name', instance.last_name)
+        instance.picture = validated_data.get('picture', instance.picture)
+
+        instance.save()  # Сохраняем изменения в Customer
+
+        return instance
 # ----------------------------------------------------------------------------------------------------
 
 

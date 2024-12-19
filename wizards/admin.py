@@ -17,7 +17,7 @@ class WizardAdmin(admin.ModelAdmin):
 #----------------------------------------------------------------------------------------------------
 @admin.register(Customer)
 class CustomerAdmin(admin.ModelAdmin):
-  list_display = ['id', 'user_id', 'username', 'email', 'picture']
+  list_display = ['id', 'user_id', 'username', 'first_name', 'last_name', 'email', 'picture']
 #----------------------------------------------------------------------------------------------------
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):

@@ -36,8 +36,10 @@ class Wizard(models.Model):
 class Customer(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)  # Связь с пользователем
     
-    username = models.CharField("Название", max_length=150, null=True, blank=True)
+    username = models.CharField("Имя пользователя", max_length=150, null=True, blank=True)
     email = models.EmailField("Почта", null=True, blank=True)
+    first_name = models.CharField("Имя", max_length=150, null=True, blank=True)
+    last_name = models.CharField("Фамилия", max_length=150, null=True, blank=True)
     picture = models.ImageField("Изображение", null=True, upload_to="customers")
 
     class Meta:

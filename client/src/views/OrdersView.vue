@@ -3,18 +3,13 @@ import { computed, onBeforeMount, ref, watch } from "vue";
 import axios from "axios";
 import Cookies from "js-cookie";
 import _ from "lodash";
+import { storeToRefs } from "pinia";
 
-import { useRouter } from "vue-router";
 import useUserStore from "@/stores/userStore";
 
 const userStore = useUserStore();
-// Проверка, вошел ли пользователь в систему
-const isLoggedIn = computed(() => {
-  return userStore.isAuthenticated; // Используем isAuthenticated из userStore
-});
-const isSuperUser = computed(() => {
-  return userStore.isSuperUser;
-});
+const { isSuperUser, isAuthenticated, username, userId } =
+  storeToRefs(userStore);
 
 onBeforeMount(() => {
   axios.defaults.headers.common["X-CSRFToken"] = Cookies.get("csrftoken");
@@ -59,6 +54,9 @@ async function fetchGuilds() {
 const customersById = computed(() => {
   return _.keyBy(customers.value, (x) => x.id);
 });
+const customersByUserId = computed(() => {
+  return _.keyBy(customers.value, (x) => x.user_id);
+});
 
 async function fetchCustomers() {
   const r = await axios.get("/api/customers/");
@@ -68,16 +66,36 @@ async function fetchCustomers() {
 async function fetchOrders() {
   loading.value = true;
   const r = await axios.get("/api/orders/");
-  console.log(r.data);
   orders.value = r.data;
   loading.value = false;
 }
 
 async function onOrderAdd() {
-  await axios.post("/api/orders/", {
-    ...orderToAdd.value,
-  });
-  await fetchOrders(); // переподтягиваю
+  const formData = new FormData();
+  // Получение клиента по userId
+  const customerForUser = customersByUserId.value[userId.value];
+
+  formData.set("name", orderToAdd.value.name);
+  formData.set("cost", orderToAdd.value.cost);
+  formData.set("guild", orderToAdd.value.guild);
+  formData.set("team", orderToAdd.value.team);
+  formData.set("customer", customerForUser.id);
+  try {
+    await axios.post("/api/orders/", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    await fetchOrders();
+
+    // Очищаем поля после успешного добавления
+    orderToAdd.value.name = "";
+    orderToAdd.value.cost = "";
+    orderToAdd.value.guild = "";
+    orderToAdd.value.team = "";
+  } catch (error) {
+    console.error("Ошибка при создании заказа:", error);
+  }
 }
 
 async function OnOrderEdit(order) {
@@ -123,7 +141,7 @@ watch(selectedGuild, updateTeams);
 <template>
   <div class="container-fluid">
     <div class="p-2">
-      <div v-if="isLoggedIn">
+      <div v-if="isAuthenticated">
         <form @submit.prevent.stop="onOrderAdd">
           <div class="row">
             <div class="col">
@@ -143,23 +161,9 @@ watch(selectedGuild, updateTeams);
                   type="text"
                   class="form-control"
                   v-model="orderToAdd.cost"
+                  required
                 />
                 <label for="floatingInput">Стоимость</label>
-              </div>
-            </div>
-            <div class="col-auto">
-              <div class="form-floating mb-3">
-                <select
-                  class="form-select"
-                  v-model="orderToAdd.status"
-                  disabled
-                  required
-                >
-                  <option :key="s.id" :value="s.id" v-for="s in orderStatuses">
-                    {{ s.name }}
-                  </option>
-                </select>
-                <label for="floatingInput">Статус</label>
               </div>
             </div>
             <div class="col-auto">
@@ -185,6 +189,7 @@ watch(selectedGuild, updateTeams);
                   :disabled="!selectedGuild"
                   required
                 >
+                  <option value="" disabled selected>Выберите команду</option>
                   <option :key="t.id" :value="t.id" v-for="t in filteredTeams">
                     {{ t.name }}
                   </option>
@@ -192,7 +197,7 @@ watch(selectedGuild, updateTeams);
                 <label for="floatingInput">Команда</label>
               </div>
             </div>
-            <div class="col-auto">
+            <div v-if="isSuperUser" class="col-auto">
               <div class="form-floating mb-3">
                 <select
                   class="form-select"
@@ -200,7 +205,7 @@ watch(selectedGuild, updateTeams);
                   required
                 >
                   <option :key="c.id" :value="c.id" v-for="c in customers">
-                    {{ c.name }}
+                    {{ c.username }}
                   </option>
                 </select>
                 <label for="floatingInput">Заказчик</label>
@@ -220,7 +225,7 @@ watch(selectedGuild, updateTeams);
           <div>{{ item.status }}</div>
           <div>{{ teamsById[item.team]?.name }}</div>
           <div>{{ guildsById[item.guild]?.name }}</div>
-          <div>{{ customersById[item.customer]?.name }}</div>
+          <div>{{ customersById[item.customer]?.username }}</div>
           <button
             class="btn btn-success"
             @click="OnOrderEdit(item)"
@@ -265,43 +270,46 @@ watch(selectedGuild, updateTeams);
                       />
                       <label for="floatingInput">Название</label>
                     </div>
-                    <div class="col">
+                  </div>
+                  <div class="col-auto">
+                    <div class="form-floating mb-3">
+                      <input
+                        type="text"
+                        class="form-control"
+                        v-model="orderToEdit.cost"
+                      />
+                      <label for="floatingInput">Стоимость</label>
+                    </div>
+                  </div>
+
+                  <div class="row">
+                    <div class="col-auto">
                       <div class="form-floating mb-3">
-                        <input
-                          type="text"
-                          class="form-control"
-                          v-model="orderToEdit.cost"
-                        />
-                        <label for="floatingInput">Стоимость</label>
+                        <select
+                          class="form-select"
+                          v-model="orderToEdit.status"
+                          required
+                        >
+                          <option
+                            :key="s.id"
+                            :value="s.id"
+                            v-for="s in orderStatuses"
+                          >
+                            {{ s.name }}
+                          </option>
+                        </select>
+                        <label for="floatingInput">Статус</label>
                       </div>
                     </div>
-                  </div>
-                  <div class="col-auto">
-                    <div class="form-floating mb-3">
-                      <select
-                        class="form-select"
-                        v-model="orderToEdit.status"
-                        required
-                      >
-                        <option
-                          :key="s.id"
-                          :value="s.id"
-                          v-for="s in orderStatuses"
-                        >
-                          {{ s.name }}
-                        </option>
-                      </select>
-                      <label for="floatingInput">Статус</label>
-                    </div>
-                  </div>
-                  <div class="col-auto">
-                    <div class="form-floating mb-3">
-                      <select class="form-select" v-model="orderToEdit.guild">
-                        <option :key="g.id" :value="g.id" v-for="g in guilds">
-                          {{ g.name }}
-                        </option>
-                      </select>
-                      <label for="floatingInput">Гильдия</label>
+                    <div class="col">
+                      <div class="form-floating mb-3">
+                        <select class="form-select" v-model="orderToEdit.guild">
+                          <option :key="g.id" :value="g.id" v-for="g in guilds">
+                            {{ g.name }}
+                          </option>
+                        </select>
+                        <label for="floatingInput">Гильдия</label>
+                      </div>
                     </div>
                   </div>
                   <div class="col-auto">
@@ -318,7 +326,7 @@ watch(selectedGuild, updateTeams);
                       <label for="floatingInput">Команда</label>
                     </div>
                   </div>
-                  <div class="col-auto">
+                  <div v-if="isSuperUser" class="col-auto">
                     <div class="form-floating mb-3">
                       <select
                         class="form-select"
@@ -330,7 +338,7 @@ watch(selectedGuild, updateTeams);
                           :value="c.id"
                           v-for="c in customers"
                         >
-                          {{ c.name }}
+                          {{ c.username }}
                         </option>
                       </select>
                       <label for="floatingInput">Заказчик</label>
