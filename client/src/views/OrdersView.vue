@@ -67,6 +67,8 @@ async function fetchOrders() {
   const r = await axios.get("/api/orders/");
   orders.value = r.data;
   loading.value = false;
+  await fetchStats();
+  await filterOrdersByUser();
 }
 
 async function onOrderAdd() {
@@ -87,7 +89,6 @@ async function onOrderAdd() {
       },
     });
     await fetchOrders();
-    await filterOrdersByUser();
 
     // Очищаем поля после успешного добавления
     orderToAdd.value.name = "";
@@ -109,13 +110,11 @@ async function onOrderUpdate() {
     ...orderToEdit.value,
   });
   await fetchOrders();
-  await filterOrdersByUser();
 }
 
 async function OnOrderRemove(order) {
   await axios.delete(`/api/orders/${order.id}/`);
   await fetchOrders();
-  await filterOrdersByUser();
 }
 
 onBeforeMount(async () => {

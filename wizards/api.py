@@ -90,8 +90,8 @@ class OrdersViewset(
     class StatsSerializer(serializers.Serializer):
         count = serializers.IntegerField()
         avg = serializers.FloatField()
-        max = serializers.IntegerField()
-        min = serializers.IntegerField()
+        max = serializers.FloatField()
+        min = serializers.FloatField()
 
     @action(detail=False, methods=["GET"], url_path="stats")
     def get_stats(self, request, *args, **kwargs):
