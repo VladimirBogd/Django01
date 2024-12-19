@@ -62,8 +62,8 @@ class Order(models.Model):
     COMPLETED = 'Выполнен'
     FAILED = 'Невыполнен'
 
-  name = models.TextField("Название")
-  cost = models.TextField("Стоимость")
+  name = models.CharField("Название", max_length=255)
+  cost = models.DecimalField("Стоимость", max_digits=10, decimal_places=2)
   status = models.CharField(
       "Статус",
       max_length=20,

@@ -135,6 +135,7 @@ onBeforeMount(async () => {
   await fetchWizards();
   await fetchGuilds();
   await fetchTeams();
+  await fetchStats();
 });
 
 const showZoomImageContainer = ref(false);
@@ -238,6 +239,7 @@ watch(selectedGuild, updateTeams);
             </div>
           </form>
         </div>
+
         <div v-if="loading">Гружу...</div>
 
         <div>
@@ -424,5 +426,25 @@ img {
   height: 100%;
   width: 100%;
   object-fit: contain;
+}
+
+.centered-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  text-align: center;
+}
+
+.centered-content__title {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.centered-content__item {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>

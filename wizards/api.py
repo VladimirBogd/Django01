@@ -4,8 +4,11 @@ from rest_framework.decorators import action
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from rest_framework.response import Response
+from rest_framework import serializers
 from wizards.models import Wizard, Guild, Order, Customer, Team
 from wizards.serializers import WizardSerializer, GuildSerializer, TeamSerializer, OrderSerializer, CustomerSerializer, UserSerializer
+from django.db.models import Avg, Count, Max, Min
+
 
 class GuildsViewset(
     mixins.CreateModelMixin,
@@ -43,6 +46,7 @@ class WizardsViewset(
 ):
     queryset = Wizard.objects.all()
     serializer_class = WizardSerializer
+
 # ----------------------------------------------------------------------------------------------------
 
 
@@ -56,7 +60,7 @@ class CustomersViewset(
 ):
     queryset = Customer.objects.all()
     serializer_class = CustomerSerializer
-    
+
     def perform_create(self, serializer):
         # Здесь можно не указывать user, если он создается в сериализаторе
         serializer.save()
@@ -82,6 +86,24 @@ class OrdersViewset(
         else:
             qs = qs.filter(user=self.request.user)
             return qs
+
+    class StatsSerializer(serializers.Serializer):
+        count = serializers.IntegerField()
+        avg = serializers.FloatField()
+        max = serializers.IntegerField()
+        min = serializers.IntegerField()
+
+    @action(detail=False, methods=["GET"], url_path="stats")
+    def get_stats(self, request, *args, **kwargs):
+        stats = Order.objects.aggregate(
+            count=Count("*"),
+            avg=Avg("cost"),
+            max=Max("cost"),
+            min=Min("cost"),
+        )
+
+        serializer = self.StatsSerializer(instance=stats)
+        return Response(serializer.data)
 # ----------------------------------------------------------------------------------------------------
 
 
@@ -98,32 +120,34 @@ class OrderStatusViewset(viewsets.ViewSet):
 
 
 class UserViewset(
-    mixins.CreateModelMixin,
-    mixins.RetrieveModelMixin,
-    mixins.UpdateModelMixin,
-    mixins.DestroyModelMixin,
-    mixins.ListModelMixin,
-    GenericViewSet):
-    
+        mixins.CreateModelMixin,
+        mixins.RetrieveModelMixin,
+        mixins.UpdateModelMixin,
+        mixins.DestroyModelMixin,
+        mixins.ListModelMixin,
+        GenericViewSet):
+
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    
+
     # Новый метод для получения списка пользователей
     def list(self, request, *args, **kwargs):
         if not request.user.is_superuser:
             return Response({"error": "Недостаточно прав доступа."}, status=403)
-        
+
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
-    
+
     @action(url_path="my-customers", methods=["GET"], detail=False)
     def my_customers(self, request, *args, **kwargs):
+        if not request.user.is_authenticated:
+            return Response({"error": "Недостаточно прав доступа."}, status=403)
+
         customers = Customer.objects.filter(user=request.user)
         serializer = CustomerSerializer(customers, many=True)
         return Response(serializer.data)
 
-    
     @action(url_path="info", methods=["GET"], detail=False)
     def get_info(self, request, *args, **kwargs):
         data = {

@@ -124,6 +124,7 @@ onBeforeMount(async () => {
   await fetchGuilds();
   await fetchCustomers();
   await fetchOrderStatuses();
+  await fetchStats();
   await filterOrdersByUser();
 });
 
@@ -155,6 +156,16 @@ function filterOrdersByUser() {
 }
 // Устанавливаем реактивный обработчик для выбора гильдии
 watch(selectedUser, filterOrdersByUser);
+
+const stats = ref({});
+async function fetchStats() {
+  try {
+    const response = await axios.get("/api/orders/stats/");
+    stats.value = response.data;
+  } catch (error) {
+    console.error("Ошибка при получении статистики:", error);
+  }
+}
 </script>
 
 <template>
@@ -237,6 +248,22 @@ watch(selectedUser, filterOrdersByUser);
         </form>
 
         <div v-if="loading">Гружу...</div>
+
+        <div class="statictics">
+          <div class="stats centered-content">
+            <h3 class="centered-content__title">Статистика персонажей</h3>
+            <p class="centered-content__item">Количество: {{ stats.count }}</p>
+            <p class="centered-content__item">
+              Средняя цена: {{ stats.avg.toFixed(2) }}
+            </p>
+            <p class="centered-content__item">
+              Максимальная цена: {{ stats.max }}
+            </p>
+            <p class="centered-content__item">
+              Минимальная цена: {{ stats.min }}
+            </p>
+          </div>
+        </div>
 
         <div>
           <div v-if="isSuperUser" class="d-flex justify-content-end">
@@ -418,5 +445,53 @@ watch(selectedUser, filterOrdersByUser);
   gap: 16px;
   align-items: center;
   align-content: center;
+}
+
+.statictics {
+  margin: 20px;
+  padding: 20px;
+  background-color: #e0f7fa; /* Более мягкий цвет фона */
+  border-radius: 10px; /* Закругленные углы */
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1); /* Тень */
+  transition: all 0.3s ease; /* Плавный переход для эффектов при наведении */
+}
+
+.statictics:hover {
+  transform: translateY(-5px); /* Поднимает блок при наведении */
+}
+
+.centered-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  text-align: center;
+}
+
+.centered-content__title {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 24px; /* Увеличенный шрифт заголовка */
+  font-weight: bold; /* Сделать заголовок жирным */
+  color: #00796b; /* Цвет заголовка */
+  margin-bottom: 15px; /* Отступ снизу */
+}
+
+.centered-content__item {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px; /* Размер шрифта для элементов */
+  color: #555; /* Цвет текста */
+  border: 1px solid #00796b; /* Обводка вокруг элемента */
+  border-radius: 5px; /* Закругленные углы для обводки */
+  padding: 10px; /* Отступ внутри элемента для текста */
+  background-color: white; /* Цвет фона для элементов */
+  transition: background-color 0.3s ease; /* Плавный переход цвета фона при наведении */
+}
+
+.centered-content__item:hover {
+  background-color: #f1f1f1; /* Цвет фона при наведении на элемент */
 }
 </style>
