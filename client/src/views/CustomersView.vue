@@ -368,7 +368,7 @@ function hideZoomImage() {
   border: 1px solid silver;
   border-radius: 8px;
   display: grid;
-  grid-template-columns: 1fr auto auto auto auto auto;
+  grid-template-columns: 1fr auto auto auto auto auto auto;
   gap: 16px;
   align-items: center;
   align-content: center;

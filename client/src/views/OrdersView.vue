@@ -78,7 +78,8 @@ async function onOrderAdd() {
   formData.set("cost", orderToAdd.value.cost);
   formData.set("guild", orderToAdd.value.guild);
   formData.set("team", orderToAdd.value.team);
-  formData.set("customer", customerForUser.id);
+  if (isSuperUser) formData.set("customer", orderToAdd.value.customer);
+  else formData.set("customer", customerForUser.id);
   try {
     await axios.post("/api/orders/", formData, {
       headers: {
@@ -86,12 +87,14 @@ async function onOrderAdd() {
       },
     });
     await fetchOrders();
+    await filterOrdersByUser();
 
     // Очищаем поля после успешного добавления
     orderToAdd.value.name = "";
     orderToAdd.value.cost = "";
     orderToAdd.value.guild = "";
     orderToAdd.value.team = "";
+    if (isSuperUser) orderToAdd.value.customer = "";
   } catch (error) {
     console.error("Ошибка при создании заказа:", error);
   }
@@ -106,21 +109,22 @@ async function onOrderUpdate() {
     ...orderToEdit.value,
   });
   await fetchOrders();
+  await filterOrdersByUser();
 }
 
 async function OnOrderRemove(order) {
   await axios.delete(`/api/orders/${order.id}/`);
   await fetchOrders();
+  await filterOrdersByUser();
 }
 
 onBeforeMount(async () => {
-  await Promise.all([
-    fetchOrders(),
-    fetchTeams(),
-    fetchGuilds(),
-    fetchCustomers(),
-    fetchOrderStatuses(),
-  ]);
+  await fetchOrders();
+  await fetchTeams();
+  await fetchGuilds();
+  await fetchCustomers();
+  await fetchOrderStatuses();
+  await filterOrdersByUser();
 });
 
 function updateTeams() {
@@ -135,6 +139,22 @@ function updateTeams() {
 }
 // Устанавливаем реактивный обработчик для выбора гильдии
 watch(selectedGuild, updateTeams);
+
+const selectedUser = ref(null);
+const filteredOrders = ref([]);
+function filterOrdersByUser() {
+  if (selectedUser.value === null) {
+    filteredOrders.value = orders.value;
+  } else if (selectedUser.value.user_id === userId.value && isSuperUser.value) {
+    filteredOrders.value = orders.value;
+  } else {
+    filteredOrders.value = orders.value.filter(
+      (order) => order.customer === selectedUser.value.id
+    );
+  }
+}
+// Устанавливаем реактивный обработчик для выбора гильдии
+watch(selectedUser, filterOrdersByUser);
 </script>
 
 <template>
@@ -218,24 +238,40 @@ watch(selectedGuild, updateTeams);
 
         <div v-if="loading">Гружу...</div>
 
-        <div v-for="item in orders" :key="item.id" class="order-item">
-          <div>{{ item.name }}</div>
-          <div>{{ item.cost }}</div>
-          <div>{{ item.status }}</div>
-          <div>{{ teamsById[item.team]?.name }}</div>
-          <div>{{ guildsById[item.guild]?.name }}</div>
-          <div>{{ customersById[item.customer]?.username }}</div>
-          <button
-            class="btn btn-success"
-            @click="OnOrderEdit(item)"
-            data-bs-toggle="modal"
-            data-bs-target="#editOrderModal"
-          >
-            <i class="bi bi-pencil"></i>
-          </button>
-          <button class="btn btn-danger" @click="OnOrderRemove(item)">
-            <i class="bi bi-x"></i>
-          </button>
+        <div>
+          <div v-if="isSuperUser" class="d-flex justify-content-end">
+            <div class="form-floating mb-3 w-25">
+              <select
+                class="form-select"
+                v-model="selectedUser"
+                @change="filterOrdersByUser"
+              >
+                <option :key="c.id" :value="c" v-for="c in customers">
+                  {{ c.username }}
+                </option>
+              </select>
+              <label for="floatingInput">Фильтр по юзеру</label>
+            </div>
+          </div>
+          <div v-for="item in filteredOrders" :key="item.id" class="order-item">
+            <div>{{ item.name }}</div>
+            <div>{{ item.cost }}</div>
+            <div>{{ item.status }}</div>
+            <div>{{ teamsById[item.team]?.name }}</div>
+            <div>{{ guildsById[item.guild]?.name }}</div>
+            <div>{{ customersById[item.customer]?.username }}</div>
+            <button
+              class="btn btn-success"
+              @click="OnOrderEdit(item)"
+              data-bs-toggle="modal"
+              data-bs-target="#editOrderModal"
+            >
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn btn-danger" @click="OnOrderRemove(item)">
+              <i class="bi bi-x"></i>
+            </button>
+          </div>
         </div>
 
         <div
@@ -350,7 +386,7 @@ watch(selectedGuild, updateTeams);
                     class="btn btn-secondary"
                     data-bs-dismiss="modal"
                   >
-                    Close
+                    Закрыть
                   </button>
                   <button
                     type="button"
@@ -358,7 +394,7 @@ watch(selectedGuild, updateTeams);
                     data-bs-dismiss="modal"
                     @click="onOrderUpdate"
                   >
-                    Save changes
+                    Сохранить изменения
                   </button>
                 </div>
               </div>
