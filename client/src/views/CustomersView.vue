@@ -4,15 +4,6 @@ import axios from "axios";
 import Cookies from "js-cookie";
 import _ from "lodash";
 
-import { storeToRefs } from "pinia";
-
-import useUserStore from "@/stores/userStore";
-
-// Проверка, вошел ли пользователь в систему
-const userStore = useUserStore();
-const { isSuperUser, isAuthenticated, username, userId } =
-  storeToRefs(userStore);
-
 onBeforeMount(() => {
   axios.defaults.headers.common["X-CSRFToken"] = Cookies.get("csrftoken");
 });

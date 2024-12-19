@@ -3,6 +3,11 @@ import { computed, onBeforeMount, ref } from "vue";
 import axios from "axios";
 import Cookies from "js-cookie";
 import _ from "lodash";
+import { storeToRefs } from "pinia";
+import useUserStore from "@/stores/userStore";
+
+const userStore = useUserStore();
+const { isSuperUser, isAuthenticated } = storeToRefs(userStore);
 
 onBeforeMount(() => {
   axios.defaults.headers.common["X-CSRFToken"] = Cookies.get("csrftoken");
@@ -66,117 +71,128 @@ onBeforeMount(async () => {
 <template>
   <div class="container-fluid">
     <div class="p-2">
-      <form @submit.prevent.stop="onTeamAdd">
-        <div class="row">
-          <div class="col">
-            <div class="form-floating mb-3">
-              <input
-                type="text"
-                class="form-control"
-                v-model="teamToAdd.name"
-                required
-              />
-              <label for="floatingInput">Название</label>
-            </div>
-          </div>
-          <div class="col-auto">
-            <div class="form-floating mb-3">
-              <select class="form-select" v-model="teamToAdd.guild" required>
-                <option :value="g.id" v-for="g in guilds">{{ g.name }}</option>
-              </select>
-              <label for="floatingInput">Гильдия</label>
-            </div>
-          </div>
-          <div class="col-auto">
-            <button class="btn btn-primary">Добавить</button>
-          </div>
-        </div>
-      </form>
-
-      <div v-if="loading">Гружу...</div>
-
-      <div>
-        <div v-for="item in teams" class="team-item">
-          <div>{{ item.name }}</div>
-          <div>{{ guildsById[item.guild]?.name }}</div>
-          <button
-            class="btn btn-success"
-            @click="OnTeamEdit(item)"
-            data-bs-toggle="modal"
-            data-bs-target="#editTeamModal"
-          >
-            <i class="bi bi-pencil"></i>
-          </button>
-          <button class="btn btn-danger" @click="OnTeamRemove(item)">
-            <i class="bi bi-x"></i>
-          </button>
-        </div>
-      </div>
-
-      <div
-        class="modal fade"
-        id="editTeamModal"
-        tabindex="-1"
-        aria-labelledby="editTeamModalLabel"
-        aria-hidden="true"
-      >
-        <div class="modal-dialog">
-          <div class="modal-content">
-            <div class="modal-header">
-              <h1 class="modal-title fs-5" id="editTeamModalLabel">
-                Редактировать
-              </h1>
-              <button
-                type="button"
-                class="btn-close"
-                data-bs-dismiss="modal"
-                aria-label="Close"
-              ></button>
-            </div>
-            <div class="modal-body">
-              <div class="row">
-                <div class="col">
-                  <div class="form-floating mb-3">
-                    <input
-                      type="text"
-                      class="form-control"
-                      v-model="teamToEdit.name"
-                    />
-                    <label for="floatingInput">Название</label>
-                  </div>
-                </div>
-                <div class="col-auto">
-                  <div class="form-floating mb-3">
-                    <select class="form-select" v-model="teamToEdit.guild">
-                      <option :value="g.id" v-for="g in guilds">
-                        {{ g.name }}
-                      </option>
-                    </select>
-                    <label for="floatingInput">Гильдия</label>
-                  </div>
+      <div v-if="isAuthenticated">
+        <div v-if="isSuperUser">
+          <form @submit.prevent.stop="onTeamAdd">
+            <div class="row">
+              <div class="col">
+                <div class="form-floating mb-3">
+                  <input
+                    type="text"
+                    class="form-control"
+                    v-model="teamToAdd.name"
+                    required
+                  />
+                  <label for="floatingInput">Название</label>
                 </div>
               </div>
-              <div class="modal-footer">
+              <div class="col-auto">
+                <div class="form-floating mb-3">
+                  <select
+                    class="form-select"
+                    v-model="teamToAdd.guild"
+                    required
+                  >
+                    <option :value="g.id" :key="g.id" v-for="g in guilds">
+                      {{ g.name }}
+                    </option>
+                  </select>
+                  <label for="floatingInput">Гильдия</label>
+                </div>
+              </div>
+              <div class="col-auto">
+                <button class="btn btn-primary">Добавить</button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        <div v-if="loading">Гружу...</div>
+
+        <div>
+          <div v-for="item in teams" :key="item.id" class="team-item">
+            <div>{{ item.name }}</div>
+            <div>{{ guildsById[item.guild]?.name }}</div>
+            <button
+              class="btn btn-success"
+              @click="OnTeamEdit(item)"
+              data-bs-toggle="modal"
+              data-bs-target="#editTeamModal"
+            >
+              <i class="bi bi-pencil"></i>
+            </button>
+            <button class="btn btn-danger" @click="OnTeamRemove(item)">
+              <i class="bi bi-x"></i>
+            </button>
+          </div>
+        </div>
+
+        <div
+          class="modal fade"
+          id="editTeamModal"
+          tabindex="-1"
+          aria-labelledby="editTeamModalLabel"
+          aria-hidden="true"
+        >
+          <div class="modal-dialog">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h1 class="modal-title fs-5" id="editTeamModalLabel">
+                  Редактировать
+                </h1>
                 <button
                   type="button"
-                  class="btn btn-secondary"
+                  class="btn-close"
                   data-bs-dismiss="modal"
-                >
-                  Close
-                </button>
-                <button
-                  type="button"
-                  class="btn btn-primary"
-                  data-bs-dismiss="modal"
-                  @click="onTeamUpdate"
-                >
-                  Save changes
-                </button>
+                  aria-label="Close"
+                ></button>
+              </div>
+              <div class="modal-body">
+                <div class="row">
+                  <div class="col">
+                    <div class="form-floating mb-3">
+                      <input
+                        type="text"
+                        class="form-control"
+                        v-model="teamToEdit.name"
+                      />
+                      <label for="floatingInput">Название</label>
+                    </div>
+                  </div>
+                  <div class="col-auto">
+                    <div class="form-floating mb-3">
+                      <select class="form-select" v-model="teamToEdit.guild">
+                        <option :value="g.id" v-for="g in guilds" :key="g.id">
+                          {{ g.name }}
+                        </option>
+                      </select>
+                      <label for="floatingInput">Гильдия</label>
+                    </div>
+                  </div>
+                </div>
+                <div class="modal-footer">
+                  <button
+                    type="button"
+                    class="btn btn-secondary"
+                    data-bs-dismiss="modal"
+                  >
+                    Закрыть
+                  </button>
+                  <button
+                    type="button"
+                    class="btn btn-primary"
+                    data-bs-dismiss="modal"
+                    @click="onTeamUpdate"
+                  >
+                    Сохранить изменения
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
+      <div v-else>Вы не авторизованы</div>
     </div>
   </div>
 </template>
