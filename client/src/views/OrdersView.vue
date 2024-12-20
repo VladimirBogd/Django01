@@ -250,7 +250,7 @@ async function fetchStats() {
 
         <div class="statictics">
           <div class="stats centered-content">
-            <h3 class="centered-content__title">Статистика персонажей</h3>
+            <h3 class="centered-content__title">Статистика заказов</h3>
             <p class="centered-content__item">Количество: {{ stats.count }}</p>
             <p class="centered-content__item">
               Средняя цена: {{ stats.avg.toFixed(2) }}
