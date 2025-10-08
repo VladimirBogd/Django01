@@ -70,17 +70,17 @@ pipeline {
                         git config user.email "%GIT_EMAIL%"
 
                         git checkout main
-                        git pull --rebase https://%GIT_USER%:%GIT_TOKEN%@github.com/AshFlaare/task_sharing_management_system.git main
+                        git pull --rebase https://%GIT_USER%:%GIT_TOKEN%@github.com/VladimirBogd/Django01.git main
 
                         :: Сливаем fix
                         git merge fix
 
-                        git push https://%GIT_USER%:%GIT_TOKEN%@github.com/AshFlaare/task_sharing_management_system.git main
+                        git push https://%GIT_USER%:%GIT_TOKEN%@github.com/VladimirBogd/Django01.git main
 
                         :: Теперь синхронизируем fix с main (чтобы обе ветки идентичны)
                         git checkout fix
                         git reset --hard main
-                        git push --force https://%GIT_USER%:%GIT_TOKEN%@github.com/AshFlaare/task_sharing_management_system.git fix
+                        git push --force https://%GIT_USER%:%GIT_TOKEN%@github.com/VladimirBogd/Django01.git fix
 
                         :: Перезапуск серверов через единый конфигурационный файл PM2
                         call "${PM2_CMD}" delete ecosystem.config.js || echo No processes to delete
