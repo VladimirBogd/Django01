@@ -65,31 +65,51 @@ pipeline {
                     string(credentialsId: 'github-email', variable: 'GIT_EMAIL')
                 ]) {
                     bat """
-                        cd "${TARGET_DIR}"
+                        :: Очистка локальных изменений и сброс состояния
+                        git reset --hard HEAD
+                        git clean -fd
+                        
+                        :: Настройка git
                         git config user.name "%GIT_USER%"
                         git config user.email "%GIT_EMAIL%"
 
-                        git checkout main
-                        git pull --rebase https://%GIT_USER%:%GIT_TOKEN%@github.com/VladimirBogd/Django01.git main
+                        :: Получение всех веток
+                        git fetch --all
+                        
+                        :: Создание ветки main если её нет
+                        git checkout -B main origin/main 2>nul || git checkout -B main origin/fix
 
-                        :: Сливаем fix
+                        :: Обновление main
+                        git pull https://%GIT_USER%:%GIT_TOKEN%@github.com/VladimirBogd/Django01.git main
+
+                        :: Переключение на fix и обновление
+                        git checkout fix
+                        git pull https://%GIT_USER%:%GIT_TOKEN%@github.com/VladimirBogd/Django01.git fix
+
+                        :: Слияние fix в main
+                        git checkout main
                         git merge fix
 
+                        :: Пушим в СВОЙ репозиторий (исправьте на ваш)
                         git push https://%GIT_USER%:%GIT_TOKEN%@github.com/VladimirBogd/Django01.git main
 
-                        :: Теперь синхронизируем fix с main (чтобы обе ветки идентичны)
+                        :: Синхронизация fix с main
                         git checkout fix
                         git reset --hard main
                         git push --force https://%GIT_USER%:%GIT_TOKEN%@github.com/VladimirBogd/Django01.git fix
 
-                        :: Перезапуск серверов через единый конфигурационный файл PM2
-                        call "${PM2_CMD}" delete ecosystem.config.js || echo No processes to delete
-                        call "${PM2_CMD}" start ecosystem.config.js
+                        :: Перезапуск серверов (упрощенная версия)
+                        call "${PM2_CMD}" delete all || echo No processes to delete
                         
-                        :: Ждем немного и проверяем статус
-                        timeout(time: 10, unit: 'SECONDS') {
-                            call "${PM2_CMD}" list
-                        }
+                        :: Запуск Django
+                        cd "${TARGET_DIR}"
+                        call "${PM2_CMD}" start "${PYTHON_EXE}" --name django -- manage.py runserver 127.0.0.1:8000
+
+                        :: Запуск Vue через bat файл (надежнее)
+                        call "${PM2_CMD}" start "cmd" --name vue -- /c "cd /d \"${TARGET_DIR}\\client\" && npm run dev"
+
+                        :: Проверка статуса
+                        call "${PM2_CMD}" list
                     """
                 }
             }
