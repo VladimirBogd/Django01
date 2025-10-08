@@ -71,6 +71,7 @@ const { isSuperUser, isAuthenticated, username, userId } = storeToRefs(userStore
     <div>
       <router-view />
     </div>
+    
   </div>
 </template>
 
