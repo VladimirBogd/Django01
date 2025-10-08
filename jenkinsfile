@@ -87,7 +87,13 @@ pipeline {
                         call "${PM2_CMD}" start "${PYTHON_EXE}" --name django -- manage.py runserver 127.0.0.1:8000
 
                         call "${PM2_CMD}" delete vue || echo No Vue process
-                        call "${PM2_CMD}" start "${CMD}" --name vue -- /c "cd ${TARGET_DIR}\\client && npm run dev"
+                        
+                        call "${PM2_CMD}" start "cmd" --name vue -- /c "cd /d \"${TARGET_DIR}\\client\" && npm run dev"
+                        
+                        :: Ждем немного и проверяем статус
+                        timeout(time: 10, unit: 'SECONDS') {
+                            call "${PM2_CMD}" list
+                        }
                     """
                 }
             }

@@ -11,7 +11,7 @@ const { isSuperUser, isAuthenticated, username, userId } = storeToRefs(userStore
   <div>
     <nav class="navbar sticky-top navbar-expand-lg bg-body-tertiary">
       <div class="container-fluid navbar-mine">
-        <a class="navbar-brand" href="#">Fairy [Fairy Tail]</a>
+        <a class="navbar-brand" href="#">Fairy [Fairy Tail] [изм.]</a>
         <button
           class="navbar-toggler"
           type="button"
