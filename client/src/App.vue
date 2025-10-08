@@ -7,6 +7,7 @@ const { isSuperUser, isAuthenticated, username, userId } = storeToRefs(userStore
 </script>
 
 <template>
+  
   <div>
     <nav class="navbar sticky-top navbar-expand-lg bg-body-tertiary">
       <div class="container-fluid navbar-mine">
@@ -71,7 +72,7 @@ const { isSuperUser, isAuthenticated, username, userId } = storeToRefs(userStore
     <div>
       <router-view />
     </div>
-    
+
   </div>
 </template>
 
