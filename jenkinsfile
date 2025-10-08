@@ -82,13 +82,9 @@ pipeline {
                         git reset --hard main
                         git push --force https://%GIT_USER%:%GIT_TOKEN%@github.com/AshFlaare/task_sharing_management_system.git fix
 
-                        :: Перезапуск серверов
-                        call "${PM2_CMD}" delete django || echo No Django process
-                        call "${PM2_CMD}" start "${PYTHON_EXE}" --name django -- manage.py runserver 127.0.0.1:8000
-
-                        call "${PM2_CMD}" delete vue || echo No Vue process
-                        
-                        call "${PM2_CMD}" start "cmd" --name vue -- /c "cd /d \"${TARGET_DIR}\\client\" && npm run dev"
+                        :: Перезапуск серверов через единый конфигурационный файл PM2
+                        call "${PM2_CMD}" delete ecosystem.config.js || echo No processes to delete
+                        call "${PM2_CMD}" start ecosystem.config.js
                         
                         :: Ждем немного и проверяем статус
                         timeout(time: 10, unit: 'SECONDS') {
