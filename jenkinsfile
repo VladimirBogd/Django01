@@ -98,18 +98,25 @@ pipeline {
                         git reset --hard main
                         git push --force https://%GIT_USER%:%GIT_TOKEN%@github.com/VladimirBogd/Django01.git fix
 
-                        :: Перезапуск серверов (упрощенная версия)
+                        :: Перезапуск серверов через ecosystem.config.js
+                        cd "${TARGET_DIR}"
+                        
+                        :: Останавливаем и удаляем все процессы PM2
                         call "${PM2_CMD}" delete all || echo No processes to delete
                         
-                        :: Запуск Django
-                        cd "${TARGET_DIR}"
-                        call "${PM2_CMD}" start "${PYTHON_EXE}" --name django -- manage.py runserver 127.0.0.1:8000
-
-                        :: Запуск Vue через bat файл (надежнее)
-                        call "${PM2_CMD}" start "cmd" --name vue -- /c "cd /d \"${TARGET_DIR}\\client\" && npm run dev"
-
-                        :: Проверка статуса
+                        :: Запускаем все приложения через конфигурационный файл
+                        call "${PM2_CMD}" start ecosystem.config.js
+                        
+                        :: Ждем немного для стабилизации процессов
+                        ping -n 5 127.0.0.1 > nul
+                        
+                        :: Проверяем статус всех процессов
+                        echo Current PM2 status:
                         call "${PM2_CMD}" list
+                        
+                        :: Проверяем логи Vue приложения (первые 10 строк)
+                        echo Vue app logs:
+                        call "${PM2_CMD}" logs vue --lines 10 --nostream
                     """
                 }
             }
