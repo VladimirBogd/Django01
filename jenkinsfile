@@ -69,34 +69,14 @@ pipeline {
                         git config user.name "%GIT_USER%"
                         git config user.email "%GIT_EMAIL%"
 
-                        :: Получение и обновление всех веток
+                        :: Получение всех веток
                         git fetch --all
-                        git pull --all
                         
-                        :: Обновление main и fix
-                        git checkout main
+                        :: Переключаемся на ветку fix
                         git checkout fix
 
-                        :: Слияние fix в main с сообщением
-                        git checkout main
-                        git merge --no-ff fix -m "Auto-merge fix into main: Build ${env.BUILD_NUMBER}"
-
-                        :: Пушим в репозиторий
-                        git push https://%GIT_USER%:%GIT_TOKEN%@github.com/VladimirBogd/Django01.git main
-
-                        :: Синхронизация fix с main
-                        git checkout fix
-                        git merge --no-ff main -m "Sync fix with main: Build ${env.BUILD_NUMBER}"
-                        git push https://%GIT_USER%:%GIT_TOKEN%@github.com/VladimirBogd/Django01.git fix
-
-                        :: Очистка рабочей директории Jenkins (если нужно)
-                        :: git reset --hard HEAD
-                        :: git clean -fd
-
-                        :: Обновляем серверную директорию
-                        cd "${TARGET_DIR}"
-                        git fetch --all
-                        git reset --hard origin/fix
+                        :: Обновление локальной ветки fix
+                        git pull https://%GIT_USER%:%GIT_TOKEN%@github.com/VladimirBogd/Django01.git fix
 
                         :: Перезапуск серверов через ecosystem.config.js
                         cd "${TARGET_DIR}"
