@@ -102,7 +102,6 @@ pipeline {
                 echo "Performing rollback due to pipeline failure..."
                 dir("${TARGET_DIR}") {
                     bat """
-                        cd "${TARGET_DIR}"
                         git fetch --all
 
                         :: Откатываемся к коммиту перед последним пушем
