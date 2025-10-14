@@ -13,27 +13,61 @@ pipeline {
     }
 
     stages {
-        stage('Start Backend Server') {
+        stage('Pull Latest Changes') {
+            when {
+                expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
+            }
+            steps {
+                withCredentials([
+                    usernamePassword(credentialsId: 'github-creds', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN'),
+                    string(credentialsId: 'github-email', variable: 'GIT_EMAIL')
+                ]) {
+                    bat """
+                        :: Переход в серверную директорию
+                        cd "${TARGET_DIR}"
+
+                        :: Настройка git
+                        git config user.name "%GIT_USER%"
+                        git config user.email "%GIT_EMAIL%"
+
+                        :: Получение всех веток
+                        git fetch --all
+                        
+                        :: Переключаемся на ветку fix
+                        git checkout fix
+
+                        :: Обновление локальной ветки fix
+                        git pull https://%GIT_USER%:%GIT_TOKEN%@github.com/VladimirBogd/Django01.git fix
+                    """
+                }
+            }
+        }
+        stage('Restart Servers') {
             steps {
                 bat """
+                    :: Переход в серверную директорию
                     cd "${TARGET_DIR}"
-                    call "${PM2_CMD}" delete django || echo No existing Django process
-                    call "${PM2_CMD}" start "${PYTHON_EXE}" --name django -- manage.py runserver 127.0.0.1:8000
+
+                    :: Останавливаем все процессы PM2
+                    call "${PM2_CMD}" restart ecosystem.config.js
+
+                    :: Ждем немного для стабилизации процессов
+                    ping -n 10 127.0.0.1 > nul
+                    
+                    :: Проверяем статус всех процессов
+                    echo Current PM2 status:
+                    call "${PM2_CMD}" list
+                    
+                    :: Проверяем логи Vue приложения (первые 10 строк)
+                    echo Vue app logs:
+                    call "${PM2_CMD}" logs vue --lines 10 --nostream
+                    
+                    :: Проверяем логи Django приложения (первые 10 строк)
+                    echo Django app logs:
+                    call "${PM2_CMD}" logs django --lines 10 --nostream
                 """
             }
         }
-
-        stage('Start Frontend Server') {
-            steps {
-                bat """
-                    cd "${TARGET_DIR}\\client"
-                    call "${PM2_CMD}" delete vue || echo No existing Vue process
-                    call "${PM2_CMD}" start "${CMD}" --name vue -- /c "cd ${TARGET_DIR}\\client && npm run dev"
-                    echo Frontend started in background via PM2
-                """
-            }
-        }
-
         stage('Run Tests') {
             steps {
                 script {
@@ -47,63 +81,37 @@ pipeline {
                         echo "Tests failed! Stopping servers..."
 
                         bat """
-                            "${PM2_CMD}" delete django || echo No Django process to delete
-                            "${PM2_CMD}" delete vue || echo No Vue process to delete
+                            "${PM2_CMD}" stop ecosystem.config.js
                         """
                         error("Integration tests failed. Servers stopped.")
                     }
                 }
             }
         }
-        stage('Merge fix into main and sync fix') {
-            when {
-                expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
-            }
-            steps {
-                withCredentials([
-                    usernamePassword(credentialsId: 'github-creds', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN'),
-                    string(credentialsId: 'github-email', variable: 'GIT_EMAIL')
-                ]) {
-                    bat """
-                        :: Настройка git
-                        git config user.name "%GIT_USER%"
-                        git config user.email "%GIT_EMAIL%"
-
-                        :: Получение всех веток
-                        git fetch --all
-                        
-                        :: Переключаемся на ветку fix
-                        git checkout fix
-
-                        :: Обновление локальной ветки fix
-                        git pull https://%GIT_USER%:%GIT_TOKEN%@github.com/VladimirBogd/Django01.git fix
-
-                        :: Перезапуск серверов через ecosystem.config.js
-                        cd "${TARGET_DIR}"
-                        
-                        :: Останавливаем и удаляем все процессы PM2
-                        call "${PM2_CMD}" delete all || echo No processes to delete
-                        
-                        :: Запускаем все приложения через конфигурационный файл
-                        call "${PM2_CMD}" start ecosystem.config.js
-                        
-                        :: Ждем немного для стабилизации процессов
-                        ping -n 5 127.0.0.1 > nul
-                        
-                        :: Проверяем статус всех процессов
-                        echo Current PM2 status:
-                        call "${PM2_CMD}" list
-                        
-                        :: Проверяем логи Vue приложения (первые 10 строк)
-                        echo Vue app logs:
-                        call "${PM2_CMD}" logs vue --lines 10 --nostream
-                    """
-                }
-            }
-        }
     }
 
     post {
+        always {
+            echo "Pipeline execution completed"
+            bat """
+                echo Final PM2 status:
+                "${PM2_CMD}" list
+            """
+        }
+        failure {
+            script {
+                echo "Performing rollback due to pipeline failure..."
+                bat """
+                    cd "${TARGET_DIR}"
+                    git fetch --all
+
+                    :: Откатываемся к коммиту перед последним пушем
+                    git reset --hard origin/fix
+
+                    call "${PM2_CMD}" restart ecosystem.config.js
+                """
+            }
+        }
         success {
             echo "Backend and Frontend are running via PM2!"
             echo "Backend: http://127.0.0.1:8000/"
