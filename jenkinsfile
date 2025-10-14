@@ -65,36 +65,38 @@ pipeline {
                     string(credentialsId: 'github-email', variable: 'GIT_EMAIL')
                 ]) {
                     bat """
-                        :: Очистка локальных изменений и сброс состояния
-                        git reset --hard HEAD
-                        git clean -fd
-                        
                         :: Настройка git
                         git config user.name "%GIT_USER%"
                         git config user.email "%GIT_EMAIL%"
 
-                        :: Получение всех веток
+                        :: Получение и обновление всех веток
                         git fetch --all
+                        git pull --all
                         
-                        :: Переключение на main и подтягивание СВЕЖИХ изменений
+                        :: Обновление main и fix
                         git checkout main
-                        git pull https://%GIT_USER%:%GIT_TOKEN%@github.com/VladimirBogd/Django01.git main
-                        
-                        :: Переключение на fix и подтягивание изменений
                         git checkout fix
-                        git pull https://%GIT_USER%:%GIT_TOKEN%@github.com/VladimirBogd/Django01.git fix
 
-                        :: Слияние fix в main
+                        :: Слияние fix в main с сообщением
                         git checkout main
-                        git merge --no-ff fix -m "Merge fix into main: \${env.BUILD_ID}"
+                        git merge --no-ff fix -m "Auto-merge fix into main: Build ${env.BUILD_NUMBER}"
 
-                        :: Пушим main в репозиторий
+                        :: Пушим в репозиторий
                         git push https://%GIT_USER%:%GIT_TOKEN%@github.com/VladimirBogd/Django01.git main
 
-                        :: Синхронизация fix с main (обновление fix до состояния main)
+                        :: Синхронизация fix с main
                         git checkout fix
-                        git merge --no-ff main -m "Sync fix with main: \${env.BUILD_ID}"
+                        git merge --no-ff main -m "Sync fix with main: Build ${env.BUILD_NUMBER}"
                         git push https://%GIT_USER%:%GIT_TOKEN%@github.com/VladimirBogd/Django01.git fix
+
+                        :: Очистка рабочей директории Jenkins (если нужно)
+                        :: git reset --hard HEAD
+                        :: git clean -fd
+
+                        :: Обновляем серверную директорию
+                        cd "${TARGET_DIR}"
+                        git fetch --all
+                        git reset --hard origin/fix
 
                         :: Перезапуск серверов через ecosystem.config.js
                         cd "${TARGET_DIR}"
