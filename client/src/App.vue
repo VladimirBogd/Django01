@@ -42,6 +42,9 @@ const { isSuperUser, isAuthenticated, username, userId } = storeToRefs(userStore
             <li class="nav-item">
               <router-link class="nav-link" to="/orders"> Заказы </router-link>
             </li>
+            <li class="nav-item">
+              <router-link class="nav-link" to="/orders"> AAA </router-link>
+            </li>
           </ul>
           <form class="d-flex">
             <ul class="navbar-nav">
