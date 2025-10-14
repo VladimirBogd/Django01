@@ -5,7 +5,7 @@ pipeline {
         CMD = 'C:\\Windows\\System32\\cmd.exe'
         PM2_CMD = 'C:\\Users\\vovab\\node_modules\\.bin\\pm2.cmd'
         PYTHON_EXE = 'C:\\Users\\vovab\\AppData\\Local\\Programs\\Python\\Python312\\python.exe'
-        TARGET_DIR = 'C:\\Users\\vovab\\Desktop\\Флешка\\4 курс (1 семестр)\\Основы DevOps\\DevOps_LAB1\\Django01_server'
+        TARGET_DIR = 'C:\\Users\\vovab\\Desktop\\DevOps_LAB1\\Django01_server'
     }
 
     triggers { 
