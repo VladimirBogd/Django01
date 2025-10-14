@@ -22,22 +22,30 @@ pipeline {
                     usernamePassword(credentialsId: 'github-creds', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN'),
                     string(credentialsId: 'github-email', variable: 'GIT_EMAIL')
                 ]) {
-                    dir("${TARGET_DIR}") {
-                        bat """
-                            :: Настройка git
-                            git config user.name "%GIT_USER%"
-                            git config user.email "%GIT_EMAIL%"
+                    bat """
+                        cd /d "${TARGET_DIR}"
 
-                            :: Получение всех веток
-                            git fetch --all
-                            
-                            :: Переключаемся на ветку fix
-                            git checkout fix
+                        :: Настройка git
+                        git config user.name "%GIT_USER%"
+                        git config user.email "%GIT_EMAIL%"
 
-                            :: Обновление локальной ветки fix
-                            git pull https://%GIT_USER%:%GIT_TOKEN%@github.com/VladimirBogd/Django01.git fix
-                        """
-                    }
+                        :: Получение всех веток
+                        git fetch --all
+                        
+                        :: Переключаемся на ветку fix
+
+                        git checkout fix
+                        :: Обновление локальной ветки fix
+                        git pull https://%GIT_USER%:%GIT_TOKEN%@github.com/VladimirBogd/Django01.git fix
+
+                        :: Показываем текущее состояние
+                        echo "Current directory:"
+                        cd
+                        echo "Git status:"
+                        git status
+                        echo "Latest commit:"
+                        git log -1 --oneline
+                    """
                 }
             }
         }
