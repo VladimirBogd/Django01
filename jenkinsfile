@@ -23,7 +23,8 @@ pipeline {
                     string(credentialsId: 'github-email', variable: 'GIT_EMAIL')
                 ]) {
                     bat """
-                        cd /d "${TARGET_DIR}"
+                        for /f "tokens=*" %%I in ('dir "${TARGET_DIR}" /x /ad') do set SHORT_PATH=%%I
+                        cd /d %SHORT_PATH%
 
                         :: Настройка git
                         git config user.name "%GIT_USER%"
