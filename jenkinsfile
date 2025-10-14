@@ -22,68 +22,67 @@ pipeline {
                     usernamePassword(credentialsId: 'github-creds', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN'),
                     string(credentialsId: 'github-email', variable: 'GIT_EMAIL')
                 ]) {
-                    bat """
-                        :: Переход в серверную директорию
-                        cd "${TARGET_DIR}"
+                    dir("${TARGET_DIR}") {
+                        bat """
+                            :: Настройка git
+                            git config user.name "%GIT_USER%"
+                            git config user.email "%GIT_EMAIL%"
 
-                        :: Настройка git
-                        git config user.name "%GIT_USER%"
-                        git config user.email "%GIT_EMAIL%"
+                            :: Получение всех веток
+                            git fetch --all
+                            
+                            :: Переключаемся на ветку fix
+                            git checkout fix
 
-                        :: Получение всех веток
-                        git fetch --all
-                        
-                        :: Переключаемся на ветку fix
-                        git checkout fix
-
-                        :: Обновление локальной ветки fix
-                        git pull https://%GIT_USER%:%GIT_TOKEN%@github.com/VladimirBogd/Django01.git fix
-                    """
+                            :: Обновление локальной ветки fix
+                            git pull https://%GIT_USER%:%GIT_TOKEN%@github.com/VladimirBogd/Django01.git fix
+                        """
+                    }
                 }
             }
         }
         stage('Restart Servers') {
             steps {
-                bat """
-                    :: Переход в серверную директорию
-                    cd "${TARGET_DIR}"
+                dir("${TARGET_DIR}") {
+                    bat """
+                        :: Останавливаем все процессы PM2
+                        call "${PM2_CMD}" restart ecosystem.config.js
 
-                    :: Останавливаем все процессы PM2
-                    call "${PM2_CMD}" restart ecosystem.config.js
-
-                    :: Ждем немного для стабилизации процессов
-                    ping -n 10 127.0.0.1 > nul
-                    
-                    :: Проверяем статус всех процессов
-                    echo Current PM2 status:
-                    call "${PM2_CMD}" list
-                    
-                    :: Проверяем логи Vue приложения (первые 10 строк)
-                    echo Vue app logs:
-                    call "${PM2_CMD}" logs vue --lines 10 --nostream
-                    
-                    :: Проверяем логи Django приложения (первые 10 строк)
-                    echo Django app logs:
-                    call "${PM2_CMD}" logs django --lines 10 --nostream
-                """
+                        :: Ждем немного для стабилизации процессов
+                        ping -n 10 127.0.0.1 > nul
+                        
+                        :: Проверяем статус всех процессов
+                        echo Current PM2 status:
+                        call "${PM2_CMD}" list
+                        
+                        :: Проверяем логи Vue приложения (первые 10 строк)
+                        echo Vue app logs:
+                        call "${PM2_CMD}" logs vue --lines 10 --nostream
+                        
+                        :: Проверяем логи Django приложения (первые 10 строк)
+                        echo Django app logs:
+                        call "${PM2_CMD}" logs django --lines 10 --nostream
+                    """
+                }
             }
         }
         stage('Run Tests') {
             steps {
-                script {
-                    try {
-                        bat """
-                            cd "${TARGET_DIR}"
-                            "${PYTHON_EXE}" manage.py test wizards.tests
-                        """
-                        echo "Tests passed! Keeping servers running."
-                    } catch (err) {
-                        echo "Tests failed! Stopping servers..."
+                dir("${TARGET_DIR}") {
+                    script {
+                        try {
+                            bat """
+                                "${PYTHON_EXE}" manage.py test wizards.tests
+                            """
+                            echo "Tests passed! Keeping servers running."
+                        } catch (err) {
+                            echo "Tests failed! Stopping servers..."
 
-                        bat """
-                            "${PM2_CMD}" stop ecosystem.config.js
-                        """
-                        error("Integration tests failed. Servers stopped.")
+                            bat """
+                                "${PM2_CMD}" stop ecosystem.config.js
+                            """
+                            error("Integration tests failed. Servers stopped.")
+                        }
                     }
                 }
             }
@@ -101,15 +100,17 @@ pipeline {
         failure {
             script {
                 echo "Performing rollback due to pipeline failure..."
-                bat """
-                    cd "${TARGET_DIR}"
-                    git fetch --all
+                dir("${TARGET_DIR}") {
+                    bat """
+                        cd "${TARGET_DIR}"
+                        git fetch --all
 
-                    :: Откатываемся к коммиту перед последним пушем
-                    git reset --hard origin/fix
+                        :: Откатываемся к коммиту перед последним пушем
+                        git reset --hard origin/fix
 
-                    call "${PM2_CMD}" restart ecosystem.config.js
-                """
+                        call "${PM2_CMD}" restart ecosystem.config.js
+                    """
+                }
             }
         }
         success {
