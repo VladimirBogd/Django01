@@ -1,0 +1,36 @@
+networks:
+  app:
+
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+    volumes:
+      - './frontend/nginx_reverse.conf:/etc/nginx/nginx.conf'
+    depends_on:
+      - backend
+      - frontend
+    networks:
+      - app
+
+  backend:
+    build:
+      context: ./backend
+    container_name: backend
+    networks:
+      - app
+    expose:
+      - "8000"
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: frontend
+    depends_on:
+      - backend
+    networks:
+      - app
+    expose:
+      - "3000"

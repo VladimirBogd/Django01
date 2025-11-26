@@ -1,133 +1,50 @@
 pipeline {
-    agent any
-
-    environment {
-        CMD = 'C:\\Windows\\System32\\cmd.exe'
-        PM2_CMD = 'C:\\Users\\vovab\\node_modules\\.bin\\pm2.cmd'
-        PYTHON_EXE = 'C:\\Users\\vovab\\AppData\\Local\\Programs\\Python\\Python312\\python.exe'
-        TARGET_DIR = 'C:\\Users\\vovab\\Desktop\\Флешка\\4 курс (1 семестр)\\Основы DevOps\\DevOps_LAB1\\Django01_server'
-    }
-
-    triggers { 
-        githubPush() 
-    }
-
+    agent any    
+    
     stages {
-        stage('Start Backend Server') {
+        stage('Build') {
             steps {
-                bat """
-                    cd "${TARGET_DIR}"
-                    call "${PM2_CMD}" delete django || echo No existing Django process
-                    call "${PM2_CMD}" start "${PYTHON_EXE}" --name django -- manage.py runserver 127.0.0.1:8000
-                """
+                echo "Building images"
+                sh 'docker compose build'
             }
         }
-
-        stage('Start Frontend Server') {
+        stage('Test') {
             steps {
-                bat """
-                    cd "${TARGET_DIR}\\client"
-                    call "${PM2_CMD}" delete vue || echo No existing Vue process
-                    call "${PM2_CMD}" start "${CMD}" --name vue -- /c "cd ${TARGET_DIR}\\client && npm run dev"
-                    echo Frontend started in background via PM2
-                """
-            }
-        }
-
-        stage('Run Tests') {
-            steps {
-                script {
-                    try {
-                        bat """
-                            cd "${TARGET_DIR}"
-                            "${PYTHON_EXE}" manage.py test wizards.tests
-                        """
-                        echo "Tests passed! Keeping servers running."
-                    } catch (err) {
-                        echo "Tests failed! Stopping servers..."
-
-                        bat """
-                            "${PM2_CMD}" delete django || echo No Django process to delete
-                            "${PM2_CMD}" delete vue || echo No Vue process to delete
-                        """
-                        error("Integration tests failed. Servers stopped.")
-                    }
+                echo "Running tests ..."
+                dir('backend') {
+                    sh '''
+                        docker compose run --rm backend \
+                        poetry run python manage.py test wizards.tests
+                    '''
                 }
             }
         }
-        stage('Merge fix into main and sync fix') {
-            when {
-                expression { currentBuild.result == null || currentBuild.result == 'SUCCESS' }
+        stage('Deploy') {
+            when { 
+                branch 'main'
             }
             steps {
-                withCredentials([
-                    usernamePassword(credentialsId: 'github-creds', usernameVariable: 'GIT_USER', passwordVariable: 'GIT_TOKEN'),
-                    string(credentialsId: 'github-email', variable: 'GIT_EMAIL')
-                ]) {
-                    bat """
-                        :: Настройка git
-                        git config user.name "%GIT_USER%"
-                        git config user.email "%GIT_EMAIL%"
-
-                        :: Получение и обновление всех веток
-                        git fetch --all
-                        git pull --all
-                        
-                        :: Обновление main и fix
-                        git checkout main
-                        git checkout fix
-
-                        :: Слияние fix в main с сообщением
-                        git checkout main
-                        git merge --no-ff fix -m "Auto-merge fix into main: Build ${env.BUILD_NUMBER}"
-
-                        :: Пушим в репозиторий
-                        git push https://%GIT_USER%:%GIT_TOKEN%@github.com/VladimirBogd/Django01.git main
-
-                        :: Синхронизация fix с main
-                        git checkout fix
-                        git merge --no-ff main -m "Sync fix with main: Build ${env.BUILD_NUMBER}"
-                        git push https://%GIT_USER%:%GIT_TOKEN%@github.com/VladimirBogd/Django01.git fix
-
-                        :: Очистка рабочей директории Jenkins (если нужно)
-                        :: git reset --hard HEAD
-                        :: git clean -fd
-
-                        :: Обновляем серверную директорию
-                        cd "${TARGET_DIR}"
-                        git fetch --all
-                        git reset --hard origin/fix
-
-                        :: Перезапуск серверов через ecosystem.config.js
-                        cd "${TARGET_DIR}"
-                        
-                        :: Останавливаем и удаляем все процессы PM2
-                        call "${PM2_CMD}" delete all || echo No processes to delete
-                        
-                        :: Запускаем все приложения через конфигурационный файл
-                        call "${PM2_CMD}" start ecosystem.config.js
-                        
-                        :: Ждем немного для стабилизации процессов
-                        ping -n 5 127.0.0.1 > nul
-                        
-                        :: Проверяем статус всех процессов
-                        echo Current PM2 status:
-                        call "${PM2_CMD}" list
-                        
-                        :: Проверяем логи Vue приложения (первые 10 строк)
-                        echo Vue app logs:
-                        call "${PM2_CMD}" logs vue --lines 10 --nostream
-                    """
-                }
+            echo "Docker compose deploy"
+                sh '''
+                    docker compose down 
+                    docker compose up -d
+                '''
             }
         }
     }
 
     post {
+        always {
+             echo "Pipeline finished"
+        }
         success {
-            echo "Backend and Frontend are running via PM2!"
-            echo "Backend: http://127.0.0.1:8000/"
-            echo "Frontend: http://127.0.0.1:5173/"
+            echo "Pipeline success"
+        }
+        failure {
+            echo "Pipeline failure"
+        }
+        aborted {
+            echo "Pipeline aborted"
         }
     }
 }
