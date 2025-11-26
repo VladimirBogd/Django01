@@ -14,7 +14,7 @@ pipeline {
                 dir('backend') {
                     sh '''
                         docker compose run --rm backend \
-                        poetry run python manage.py test wizards.tests
+                        python manage.py test wizards.tests
                     '''
                 }
             }
