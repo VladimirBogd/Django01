@@ -1,3 +1,5 @@
+name: django01-local
+
 networks:
   app:
 
